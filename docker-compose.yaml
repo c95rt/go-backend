@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  base:
+    env_file:
+      - dev.env
+    build:
+      dockerfile: ./Dockerfile.development
+      context: .
+    networks:
+      - backend_proxy
+  backend-up:
+    extends:
+      service: base
+    restart: always
+    ports:
+      - 3001:3001
+networks:
+  backend_proxy:
+    driver: bridge

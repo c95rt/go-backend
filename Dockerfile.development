@@ -1,0 +1,24 @@
+FROM golang:1.14.4-alpine3.12 as builder
+LABEL maintainer="César Reyes <cesar95rt@gmail.com>"
+WORKDIR /build
+
+ENV GOOS=linux
+ENV GOARCH=amd64
+ENV CGO_ENABLED=0
+ENV GO111MODULE=on
+
+RUN apk update && apk upgrade && \
+  apk add --no-cache bash git openssh
+RUN apk add -U --no-cache ca-certificates
+
+COPY . .
+
+RUN go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/backend
+
+FROM ubuntu
+COPY --from=builder /go/bin/backend /backend
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /
+ENV ZONEINFO=/zoneinfo.zip
+
+CMD ["/backend", "backend-up"]
