@@ -11,7 +11,7 @@ RUN apk update && apk upgrade && \
   apk add --no-cache bash git openssh
 RUN apk add -U --no-cache ca-certificates
 
-COPY . .
+COPY ./backend .
 
 RUN go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/backend
 

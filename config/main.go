@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/gomail.v2"
 )
 
 type Configuration struct {
@@ -16,6 +17,7 @@ type Configuration struct {
 	Timeout     int    `env:"TIMEOUT,default=1"`
 	DB          db.Storage
 	SQL         database
+	AwsSMTP     awsSMTP
 	Environment string `env:"ENVIRONMENT,default=development"`
 	CasbinModel string `env:"RBAC_FILE,default=config/rbac.conf"`
 	AppName     string `env:"APP_NAME,default=app"`
@@ -30,10 +32,18 @@ type database struct {
 	OpenConnection int    `env:"DATA_BASE_MAX_OPEN_CONNECTION,default=5"`
 }
 
+type awsSMTP struct {
+	SMTPHost     string `env:"SMTP_HOST,required"`
+	SMTPPort     int    `env:"SMTP_PORT,required"`
+	SMTPUser     string `env:"SMTP_USER,required"`
+	SMTPPassword string `env:"SMTP_PASSWORD,required"`
+}
+
 type AppContext struct {
 	Config  Configuration
 	SQLConn *sqlx.DB
 	DB      db.Storage
+	AwsSMTP *gomail.Dialer
 }
 
 func CreateConnectionSQL(conf database) (*sqlx.DB, error) {
@@ -43,6 +53,11 @@ func CreateConnectionSQL(conf database) (*sqlx.DB, error) {
 		return nil, err
 	}
 	return connection, nil
+}
+
+func CreateNewConnectionSMTP(conf awsSMTP) *gomail.Dialer {
+	conn := gomail.NewDialer(conf.SMTPHost, conf.SMTPPort, conf.SMTPUser, conf.SMTPPassword)
+	return conn
 }
 
 var logger *log.Entry

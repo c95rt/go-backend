@@ -27,7 +27,7 @@ import (
 // @name Authorization
 
 func main() {
-	_ = godotenv.Load("prod.env")
+	_ = godotenv.Load("dev.env")
 
 	app := cli.NewApp()
 	app.Name = "Go Auth Service"
@@ -59,6 +59,7 @@ func main() {
 func StartServer(routes []*server.Route) {
 	ctx := server.GetAppContext()
 	ctx.CreateMySQLConnection()
+	ctx.CreateSMTPConnection()
 
 	server.UpServer(routes, ctx)
 }
