@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/joeshaw/envdecode"
 	joonix "github.com/joonix/log"
+	"github.com/pkg/errors"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
@@ -99,6 +100,14 @@ func (wrapper *ContextWrapper) CreateMySQLConnection() {
 			"error": err,
 		}).Fatal("mysql: failed to connect")
 	}
+}
+
+func (wrapper *ContextWrapper) CreateSMTPConnection() {
+	conn := config.CreateNewConnectionSMTP(wrapper.Context.Config.AwsSMTP)
+	if conn == nil {
+		log.Fatal(errors.Errorf("failed connecting SMTP"))
+	}
+	wrapper.Context.AwsSMTP = conn
 }
 
 func UpServer(routes []*Route, wrapper *ContextWrapper) {

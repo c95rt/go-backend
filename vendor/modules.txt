@@ -60,3 +60,7 @@ golang.org/x/sys/internal/unsafeheader
 # google.golang.org/genproto v0.0.0-20190522204451-c2c4e71fbf69
 google.golang.org/genproto/googleapis/logging/type
 google.golang.org/genproto/googleapis/api/annotations
+# gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc
+gopkg.in/alexcesaro/quotedprintable.v3
+# gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+gopkg.in/gomail.v2
