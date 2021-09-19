@@ -11,10 +11,12 @@ import (
 )
 
 type UserStorage interface {
-	InsertUser(*models.InsertUserOpts) (int, error)
+	InsertUser(*models.InsertAdminUserOpts) (int, error)
 	UpdateUserPassword(*models.User) error
 	GetUserByID(userID int) (*models.User, error)
+	ValidateUserEmailAndDNI(email string, dni string) (emailCounter int, dniCounter int, err error)
 	GetUsers(*models.GetUsersOpts) (*models.UsersStruct, error)
+	UpdateUser(userID int, opts *models.UpdateUserOpts) error
 }
 
 const (
@@ -136,7 +138,7 @@ const (
 	`
 )
 
-func (db *DB) InsertUser(opts *models.InsertUserOpts) (int, error) {
+func (db *DB) InsertUser(opts *models.InsertAdminUserOpts) (int, error) {
 	tx, err := db.NewTx()
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to start transaction")
@@ -174,7 +176,7 @@ func (db *DB) InsertUser(opts *models.InsertUserOpts) (int, error) {
 	return userID, nil
 }
 
-func (db *DB) insertUserTx(tx Tx, opts *models.InsertUserOpts) (int, error) {
+func (db *DB) insertUserTx(tx Tx, opts *models.InsertAdminUserOpts) (int, error) {
 	stmt, err := tx.PrepareNamed(insertUser)
 	if err != nil {
 		return 0, err
@@ -489,4 +491,201 @@ func (db *DB) countUsers(filters string, args map[string]interface{}) (int, erro
 	}
 
 	return total, nil
+}
+
+func (db *DB) UpdateUser(userID int, opts *models.UpdateUserOpts) error {
+	tx, err := db.NewTx()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+
+		tx.Commit()
+	}()
+
+	err = db.deleteUserRolesTx(tx, userID)
+	if err != nil {
+		return err
+	}
+
+	err = db.insertUserRolesTx(tx, userID, opts.Roles)
+	if err != nil {
+		return err
+	}
+
+	err = db.updateUserAdditionalTx(tx, userID, opts)
+	if err != nil {
+		return err
+	}
+
+	err = db.updateUserTx(tx, userID, opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+const (
+	deleteUserRoles = `
+	DELETE FROM
+		pivot_role_user
+	WHERE
+		pivot_role_user.user_id = :user_id;
+	`
+)
+
+func (db *DB) deleteUserRolesTx(tx Tx, userID int) error {
+	stmt, err := tx.PrepareNamed(deleteUserRoles)
+	if err != nil {
+		return err
+	}
+
+	args := map[string]interface{}{
+		"user_id": userID,
+	}
+
+	_, err = stmt.Exec(args)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+const (
+	updateUserAdditional = `
+	UPDATE
+		user_additional
+	SET
+		dni = :dni,
+		phone = :phone,
+		updated = current_timestamp()
+	WHERE
+		user_id = :user_id
+	`
+)
+
+func (db *DB) updateUserAdditionalTx(tx Tx, userID int, opts *models.UpdateUserOpts) error {
+	stmt, err := tx.PrepareNamed(updateUserAdditional)
+	if err != nil {
+		return err
+	}
+
+	args := map[string]interface{}{
+		"user_id": userID,
+		"dni":     opts.DNI,
+		"phone":   opts.Phone,
+	}
+
+	result, err := stmt.Exec(args)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if int(rowsAffected) != 1 {
+		return errors.Errorf("expected %d and updated %d", 1, rowsAffected)
+	}
+
+	return nil
+}
+
+const (
+	updateUser = `
+	UPDATE
+		user
+	SET
+		firstname = :firstname,
+		lastname = :lastname,
+		email = :email,
+		password = :password,
+		updated = current_timestamp()
+	WHERE
+		id = :user_id
+	`
+)
+
+func (db *DB) updateUserTx(tx Tx, userID int, opts *models.UpdateUserOpts) error {
+	stmt, err := tx.PrepareNamed(updateUser)
+	if err != nil {
+		return err
+	}
+
+	args := map[string]interface{}{
+		"user_id":   userID,
+		"firstname": opts.Firstname,
+		"lastname":  opts.Lastname,
+		"email":     opts.Email,
+		"password":  opts.Password,
+	}
+
+	result, err := stmt.Exec(args)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if int(rowsAffected) != 1 {
+		return errors.Errorf("expected %d and updated %d", 1, rowsAffected)
+	}
+
+	return nil
+}
+
+const (
+	validateUserEmailAndDNI = `
+	SELECT
+		(
+			SELECT
+				COUNT(user.id)
+			FROM
+				user
+			WHERE
+				user.email = :email
+		) email_counter,
+		(
+			SELECT
+				COUNT(user_additional.id)
+			FROM
+				user_additional
+			WHERE
+				user_additional.dni = :dni
+		) dni_counter
+	`
+)
+
+func (db *DB) ValidateUserEmailAndDNI(email string, dni string) (emailCounter int, dniCounter int, err error) {
+	stmt, err := db.PrepareNamed(validateUserEmailAndDNI)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	args := map[string]interface{}{
+		"email": email,
+		"dni":   dni,
+	}
+
+	row := stmt.QueryRow(args)
+
+	if err := row.Scan(
+		&emailCounter,
+		&dniCounter,
+	); err != nil {
+		return 0, 0, err
+	}
+
+	return emailCounter, dniCounter, nil
 }

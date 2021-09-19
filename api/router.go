@@ -25,6 +25,9 @@ func GetRoutes() []*server.Route {
 
 		// User
 		{Path: "/user/admin", Methods: []string{"POST", "HEAD"}, Handler: InsertAdminUser, IsProtected: true},
+		{Path: "/user", Methods: []string{"POST", "HEAD"}, Handler: InsertUser, IsProtected: false},
+		{Path: "/user/{id:[0-9]+}", Methods: []string{"PUT", "HEAD"}, Handler: UpdateUser, IsProtected: true},
+		{Path: "/user/{id:[0-9]+}", Methods: []string{"GET", "HEAD"}, Handler: GetUser, IsProtected: true},
 		{Path: "/user", Methods: []string{"GET", "HEAD"}, Handler: GetUsers, IsProtected: true},
 
 		// Event
@@ -33,5 +36,6 @@ func GetRoutes() []*server.Route {
 
 		// Order
 		{Path: "/order", Methods: []string{"POST", "HEAD"}, Handler: InsertOrder, IsProtected: true},
+		{Path: "/order", Methods: []string{"GET", "HEAD"}, Handler: InsertOrder, IsProtected: true},
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"bitbucket.org/parqueoasis/backend/db"
 	"bitbucket.org/parqueoasis/backend/middlewares"
 	"bitbucket.org/parqueoasis/backend/models"
+	"github.com/gorilla/schema"
 	"github.com/mitchellh/mapstructure"
 	"github.com/thedevsaddam/govalidator"
 )
@@ -21,6 +22,11 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 	// 	w.WriteJSON(http.StatusInternalServerError, nil, err, "failed loading time location")
 	// }
 
+	if !userInfo.IsAdmin && !userInfo.IsCashier {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
+		return
+	}
+
 	var opts models.InsertOrderOpts
 	validatorOpts := govalidator.Options{
 		Request: r,
@@ -31,11 +37,6 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 	errs := v.ValidateJSON()
 	if len(errs) > 0 {
 		w.WriteJSON(http.StatusBadRequest, errs, nil, "failed validations")
-		return
-	}
-
-	if !userInfo.IsAdmin && !userInfo.IsCashier {
-		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
 		return
 	}
 
@@ -91,4 +92,34 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 	// Generate PDFs and send emails
 
 	w.WriteJSON(http.StatusOK, order, nil, "")
+}
+
+func GetOrders(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	userInfo := models.InfoUser{}
+	mapstructure.Decode(r.Context().Value("user"), &userInfo)
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier && !userInfo.IsClient {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
+		return
+	}
+
+	validatorOpts := govalidator.Options{
+		Request: r,
+		Rules:   models.GetOrdersRules,
+	}
+	v := govalidator.New(validatorOpts)
+	errs := v.Validate()
+	if len(errs) > 0 {
+		w.WriteJSON(http.StatusBadRequest, errs, nil, "failed validations")
+		return
+	}
+
+	var opts models.GetOrdersOpts
+	decoder := schema.NewDecoder()
+	decoder.Decode(&opts, r.URL.Query())
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier {
+		opts.ClientIDs = []int{userInfo.ID}
+		opts.UserIDs = []int{}
+	}
 }

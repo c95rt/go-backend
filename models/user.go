@@ -6,7 +6,7 @@ import (
 	"github.com/thedevsaddam/govalidator"
 )
 
-type InsertUserOpts struct {
+type InsertAdminUserOpts struct {
 	Email     string `json:"email"`
 	Password  string `json:"password"`
 	Firstname string `json:"firstname"`
@@ -16,7 +16,7 @@ type InsertUserOpts struct {
 	Roles     []int  `json:"roles"`
 }
 
-var InsertUserRules = govalidator.MapData{
+var InsertAdminUserRules = govalidator.MapData{
 	"email":     []string{"required", "email"},
 	"password":  []string{"required"},
 	"firstname": []string{"required"},
@@ -24,6 +24,24 @@ var InsertUserRules = govalidator.MapData{
 	"dni":       []string{"required"},
 	"phone":     []string{"required"},
 	"roles":     []string{"required", "array_int"},
+}
+
+type InsertUserOpts struct {
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
+	DNI       string `json:"dni"`
+	Phone     string `json:"phone"`
+}
+
+var InsertUserRules = govalidator.MapData{
+	"email":     []string{"required", "email"},
+	"password":  []string{"required"},
+	"firstname": []string{"required"},
+	"lastname":  []string{"required"},
+	"dni":       []string{"required"},
+	"phone":     []string{"required"},
 }
 
 type GetUsersOpts struct {
@@ -52,6 +70,26 @@ var GetUsersRules = govalidator.MapData{
 	"dnis":         []string{"array_string"},
 	"limit_from":   []string{"numeric"},
 	"limit_to":     []string{"numeric"},
+}
+
+type UpdateUserOpts struct {
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
+	DNI       string `json:"dni"`
+	Phone     string `json:"phone"`
+	Roles     []int  `json:"roles"`
+}
+
+var UpdateUserRules = govalidator.MapData{
+	"email":     []string{"required", "email"},
+	"password":  []string{},
+	"firstname": []string{"required"},
+	"lastname":  []string{"required"},
+	"dni":       []string{"required"},
+	"phone":     []string{"required"},
+	"roles":     []string{"required", "array_int"},
 }
 
 type InfoUser struct {
