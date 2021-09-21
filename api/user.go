@@ -240,10 +240,10 @@ func GetUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Requ
 }
 
 func InsertUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
-	var opts models.UpdateUserOpts
+	var opts models.InsertUserOpts
 	validatorOpts := govalidator.Options{
 		Request: r,
-		Rules:   models.UpdateUserRules,
+		Rules:   models.InsertUserRules,
 		Data:    &opts,
 	}
 	v := govalidator.New(validatorOpts)
