@@ -53,10 +53,33 @@ github.com/urfave/negroni
 # golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
+golang.org/x/crypto/chacha20poly1305
+golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/hkdf
+golang.org/x/crypto/cryptobyte/asn1
+golang.org/x/crypto/chacha20
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/curve25519/internal/field
+# golang.org/x/net v0.0.0-20210226172049-e18ecbb05110
+golang.org/x/net/http/httpguts
+golang.org/x/net/http/httpproxy
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/dns/dnsmessage
+golang.org/x/net/lif
+golang.org/x/net/route
 # golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/cpu
+# golang.org/x/text v0.3.3
+golang.org/x/text/secure/bidirule
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+golang.org/x/text/transform
 # google.golang.org/genproto v0.0.0-20190522204451-c2c4e71fbf69
 google.golang.org/genproto/googleapis/logging/type
 google.golang.org/genproto/googleapis/api/annotations

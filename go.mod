@@ -1,6 +1,6 @@
 module bitbucket.org/parqueoasis/backend
 
-go 1.12
+go 1.14
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -14,6 +14,7 @@ require (
 	github.com/joho/godotenv v1.3.0
 	github.com/joonix/log v0.0.0-20200409080653-9c1d2ceb5f1d
 	github.com/lib/pq v1.2.0
+	github.com/mercadolibre/golang-sdk v0.0.0-20210309022848-cd44c2846d1f // indirect
 	github.com/mfuentesg/go-jwtmiddleware v1.0.0
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/pkg/errors v0.9.1

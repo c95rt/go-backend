@@ -37,5 +37,6 @@ func GetRoutes() []*server.Route {
 		// Order
 		{Path: "/order", Methods: []string{"POST", "HEAD"}, Handler: InsertOrder, IsProtected: true},
 		{Path: "/order", Methods: []string{"GET", "HEAD"}, Handler: InsertOrder, IsProtected: true},
+		{Path: "/order/ticket/{order_ticket:[a-zA-Z0-9_-]+}", Methods: []string{"DELETE", "HEAD"}, Handler: DeleteOrderTicket, IsProtected: true},
 	}
 }

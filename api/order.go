@@ -2,12 +2,15 @@ package api
 
 import (
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"bitbucket.org/parqueoasis/backend/config"
 	"bitbucket.org/parqueoasis/backend/db"
 	"bitbucket.org/parqueoasis/backend/middlewares"
 	"bitbucket.org/parqueoasis/backend/models"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/mitchellh/mapstructure"
 	"github.com/thedevsaddam/govalidator"
@@ -122,4 +125,83 @@ func GetOrders(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Re
 		opts.ClientIDs = []int{userInfo.ID}
 		opts.UserIDs = []int{}
 	}
+}
+
+func DeleteOrderTicket(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	userInfo := models.InfoUser{}
+	mapstructure.Decode(r.Context().Value("user"), &userInfo)
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
+		return
+	}
+
+	vars := mux.Vars(r)
+	orderTicket := vars["order_ticket"]
+	orderTicketArray := strings.Split(orderTicket, "x")
+	if len(orderTicketArray) != 2 {
+		w.WriteJSON(http.StatusBadRequest, nil, nil, "invalid order ticket")
+		return
+	}
+	orderIDString := orderTicketArray[0]
+	ticketIDString := orderTicketArray[1]
+	if len(orderIDString) == 0 || len(ticketIDString) == 0 {
+		w.WriteJSON(http.StatusBadRequest, nil, nil, "invalid order ticket")
+		return
+	}
+
+	orderID, err := strconv.Atoi(orderIDString)
+	if err != nil {
+		w.WriteJSON(http.StatusBadRequest, nil, err, "invalid order")
+		return
+	}
+	ticketID, err := strconv.Atoi(ticketIDString)
+	if err != nil {
+		w.WriteJSON(http.StatusBadRequest, nil, err, "invalid ticket")
+		return
+	}
+
+	order, err := ctx.DB.GetOrderByOrderIDAndTicketID(orderID, ticketID)
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting order")
+		return
+	}
+
+	if order == nil {
+		w.WriteJSON(http.StatusNotFound, nil, nil, "order not found")
+		return
+	}
+
+	if len(order.Tickets) == 0 {
+		w.WriteJSON(http.StatusNotFound, nil, nil, "ticket not found")
+		return
+	}
+
+	if !order.Paid {
+		w.WriteJSON(http.StatusBadRequest, nil, nil, "order not paid")
+		return
+	}
+
+	event := order.Tickets[0].Event
+	if event == nil {
+		w.WriteJSON(http.StatusBadRequest, nil, nil, "event not found")
+		return
+	}
+
+	if !time.Now().After(event.StartDateTime) && !time.Now().Equal(event.StartDateTime) {
+		w.WriteJSON(http.StatusBadRequest, nil, nil, "event not started")
+		return
+	}
+
+	if !time.Now().Before(event.EndDateTime) {
+		w.WriteJSON(http.StatusBadRequest, nil, nil, "event finished")
+		return
+	}
+
+	if err := ctx.DB.DeleteTicket(ticketID); err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed deleting ticket")
+		return
+	}
+
+	w.WriteJSON(http.StatusNoContent, nil, nil, "")
 }

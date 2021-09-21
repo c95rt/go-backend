@@ -1,6 +1,10 @@
 package models
 
-import "github.com/thedevsaddam/govalidator"
+import (
+	"time"
+
+	"github.com/thedevsaddam/govalidator"
+)
 
 type InsertOrderOpts struct {
 	UserID   int   `json:"user_id"`
@@ -34,12 +38,20 @@ var GetOrdersRules = govalidator.MapData{
 	"limit_to":     []string{"numeric"},
 }
 
+var DeleteOrderTicketOpts struct {
+	OrderID  int `json:"order_id"`
+	TicketID int `json:"ticket_id"`
+}
+
 type Order struct {
-	ID      int      `json:"id,omitempty"`
-	User    *User    `json:"user,omitempty"`
-	Client  *User    `json:"client,omitempty"`
-	Tickets []Ticket `json:"tickets,omitempty"`
-	Price   int      `json:"price"`
+	ID      int       `json:"id,omitempty"`
+	User    *User     `json:"user,omitempty"`
+	Client  *User     `json:"client,omitempty"`
+	Tickets []Ticket  `json:"tickets,omitempty"`
+	Price   int       `json:"price"`
+	Paid    bool      `json:"paid"`
+	Created time.Time `json:"created"`
+	Updated time.Time `json:"updated"`
 }
 
 type Ticket struct {
