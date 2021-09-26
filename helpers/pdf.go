@@ -3,10 +3,10 @@ package helpers
 import (
 	"bytes"
 	"encoding/base64"
-	"fmt"
 	"image"
 	"image/png"
 	"log"
+	"strings"
 	"text/template"
 
 	"bitbucket.org/parqueoasis/backend/models"
@@ -31,15 +31,19 @@ func (r *RequestPdf) ParseTemplate(templateFileName string, data interface{}) er
 	return nil
 }
 
+const (
+	ConstHTMLNewPage = `
+	<div class="new-page"></div>
+	`
+)
+
 func (r *RequestPdf) GeneratePDF() (*bytes.Buffer, error) {
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, body := range r.bodies {
-		pdfg.AddPage(wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(body))))
-	}
+	pdfg.AddPage(wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(strings.Join(r.bodies, ConstHTMLNewPage)))))
 
 	err = pdfg.Create()
 	if err != nil {
@@ -53,7 +57,7 @@ func GenerateTicketsPDF(order *models.Order) (*bytes.Buffer, error) {
 	r := RequestPdf{}
 
 	for _, ticket := range order.Tickets {
-		img, err := qrcode.New(fmt.Sprintf("%d-%d", order.ID, ticket.ID), qrcode.Medium)
+		img, err := qrcode.New(ticket.UUID, qrcode.Medium)
 		if err != nil {
 			return nil, err
 		}
@@ -63,9 +67,7 @@ func GenerateTicketsPDF(order *models.Order) (*bytes.Buffer, error) {
 			return nil, err
 		}
 
-		fmt.Println(string(base64))
-
-		if err := r.ParseTemplate("./templates/ticket.html", models.TicketHTML{
+		if err := r.ParseTemplate("./templates/pdf/ticket.html", models.TicketHTML{
 			ID:                 ticket.ID,
 			Firstname:          RemoveAccents(order.Client.Firstname),
 			Lastname:           order.Client.Lastname,

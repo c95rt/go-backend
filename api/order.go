@@ -26,7 +26,7 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 	// 	w.WriteJSON(http.StatusInternalServerError, nil, err, "failed loading time location")
 	// }
 
-	if !userInfo.IsAdmin && !userInfo.IsCashier {
+	if !userInfo.IsAdmin && !userInfo.IsCashier && !userInfo.IsClient {
 		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
 		return
 	}
@@ -44,20 +44,8 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		return
 	}
 
-	user, err := ctx.DB.GetUserByID(opts.UserID)
-	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting user")
-		return
-	}
-
-	if user == nil {
-		w.WriteJSON(http.StatusNotFound, nil, nil, "user not found")
-		return
-	}
-
-	if !user.HasRole(db.ConstRoles.Admin) {
-		w.WriteJSON(http.StatusBadRequest, nil, nil, "order owner must be client")
-		return
+	if userInfo.IsClient {
+		opts.UserID = userInfo.ID
 	}
 
 	ticketsByEventID := make(map[int]int)
@@ -92,8 +80,6 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed inserting order")
 		return
 	}
-
-	// Generate PDFs and send emails
 
 	w.WriteJSON(http.StatusOK, order, nil, "")
 }

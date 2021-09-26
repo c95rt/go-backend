@@ -161,11 +161,13 @@ func UpdatePaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 	go func(ctx *config.AppContext, externalReference string) {
 		order, err := ctx.DB.GetOrderByExternalReference(externalReference)
 		if err != nil {
+			w.LogError(err, "failed getting order")
 			return
 		}
 
 		pdfBuffer, err := helpers.GenerateTicketsPDF(order)
 		if err != nil {
+			w.LogError(err, "failed generating PDF")
 			return
 		}
 
@@ -181,12 +183,18 @@ func UpdatePaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 			AwsSMTP:      ctx.AwsSMTP,
 		}
 
-		ed.SendEmail(models.OrderHTML{
+		err = ed.SendEmail(models.OrderHTML{
 			ID:            order.ID,
 			Firstname:     order.Client.Firstname,
 			Lastname:      order.Client.Lastname,
 			PaymentMethod: db.ConstPaymentMethods.MercadoPago.Name,
 		})
+		if err != nil {
+			w.LogError(err, "failed sending email")
+			return
+		}
+
+		w.LogInfo(nil, "success sending email")
 	}(ctx, response.ExternalReference)
 
 	w.LogInfo(response, "success")
@@ -277,12 +285,17 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 			AwsSMTP:      ctx.AwsSMTP,
 		}
 
-		ed.SendEmail(models.OrderHTML{
+		err = ed.SendEmail(models.OrderHTML{
 			ID:            order.ID,
 			Firstname:     order.Client.Firstname,
 			Lastname:      order.Client.Lastname,
 			PaymentMethod: db.ConstPaymentMethods.MercadoPago.Name,
 		})
+		if err != nil {
+			w.LogError(err, "failed sending email")
+			return
+		}
+		w.LogInfo(nil, "success sending email")
 	}(ctx, order, pdfBuffer)
 
 	w.WriteJSON(http.StatusOK, models.TicketPDF{
