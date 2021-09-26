@@ -289,7 +289,7 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 			ID:            order.ID,
 			Firstname:     order.Client.Firstname,
 			Lastname:      order.Client.Lastname,
-			PaymentMethod: db.ConstPaymentMethods.MercadoPago.Name,
+			PaymentMethod: db.ConstPaymentMethods.Cashier.Name,
 		})
 		if err != nil {
 			w.LogError(err, "failed sending email")
