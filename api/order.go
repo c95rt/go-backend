@@ -1,13 +1,14 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"bitbucket.org/parqueoasis/backend/config"
 	"bitbucket.org/parqueoasis/backend/db"
+	"bitbucket.org/parqueoasis/backend/helpers"
 	"bitbucket.org/parqueoasis/backend/middlewares"
 	"bitbucket.org/parqueoasis/backend/models"
 	"github.com/gorilla/mux"
@@ -137,31 +138,9 @@ func DeleteOrderTicket(ctx *config.AppContext, w *middlewares.ResponseWriter, r 
 	}
 
 	vars := mux.Vars(r)
-	orderTicket := vars["order_ticket"]
-	orderTicketArray := strings.Split(orderTicket, "x")
-	if len(orderTicketArray) != 2 {
-		w.WriteJSON(http.StatusBadRequest, nil, nil, "invalid order ticket")
-		return
-	}
-	orderIDString := orderTicketArray[0]
-	ticketIDString := orderTicketArray[1]
-	if len(orderIDString) == 0 || len(ticketIDString) == 0 {
-		w.WriteJSON(http.StatusBadRequest, nil, nil, "invalid order ticket")
-		return
-	}
+	ticketUUID := vars["uuid"]
 
-	orderID, err := strconv.Atoi(orderIDString)
-	if err != nil {
-		w.WriteJSON(http.StatusBadRequest, nil, err, "invalid order")
-		return
-	}
-	ticketID, err := strconv.Atoi(ticketIDString)
-	if err != nil {
-		w.WriteJSON(http.StatusBadRequest, nil, err, "invalid ticket")
-		return
-	}
-
-	order, err := ctx.DB.GetOrderByOrderIDAndTicketID(orderID, ticketID)
+	order, err := ctx.DB.GetOrderByTicketUUID(ticketUUID)
 	if err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting order")
 		return
@@ -177,7 +156,12 @@ func DeleteOrderTicket(ctx *config.AppContext, w *middlewares.ResponseWriter, r 
 		return
 	}
 
-	if !order.Paid {
+	if order.Payment == nil {
+		w.WriteJSON(http.StatusBadRequest, nil, nil, "order not paid")
+		return
+	}
+
+	if order.Payment.Status.ID != db.ConstPaymentStatuses.Approved.ID {
 		w.WriteJSON(http.StatusBadRequest, nil, nil, "order not paid")
 		return
 	}
@@ -198,10 +182,62 @@ func DeleteOrderTicket(ctx *config.AppContext, w *middlewares.ResponseWriter, r 
 		return
 	}
 
-	if err := ctx.DB.DeleteTicket(ticketID); err != nil {
+	if err := ctx.DB.DeleteTicket(order.Tickets[0].ID); err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed deleting ticket")
 		return
 	}
 
 	w.WriteJSON(http.StatusNoContent, nil, nil, "")
+}
+
+func GetOrderTicketsPDF(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	userInfo := models.InfoUser{}
+	mapstructure.Decode(r.Context().Value("user"), &userInfo)
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier && !userInfo.IsClient {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
+		return
+	}
+
+	vars := mux.Vars(r)
+	orderID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed parsing order id")
+		return
+	}
+
+	order, err := ctx.DB.GetOrderByID(orderID)
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting order")
+		return
+	}
+
+	if order == nil {
+		w.WriteJSON(http.StatusNotFound, nil, err, "order not found")
+		return
+	}
+
+	if userInfo.IsClient {
+		if order.Client.ID != userInfo.ID {
+			w.WriteJSON(http.StatusForbidden, nil, nil, "invalid user")
+			return
+		}
+	}
+
+	pdfBuffer, err := helpers.GenerateTicketsPDF(order)
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed generating pdfs")
+		return
+	}
+
+	url, err := helpers.AddFileToS3(ctx, pdfBuffer, fmt.Sprintf("%s/%d.pdf", ctx.Config.AwsS3.S3PathTicket, order.ID))
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed uploading pdf")
+		return
+	}
+
+	w.WriteJSON(http.StatusOK, models.TicketPDF{
+		URL: url,
+	}, nil, "")
+	return
 }

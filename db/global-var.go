@@ -5,6 +5,7 @@ const (
 	ConstLayoutDateTimeZ = `T2006-01-02Z 15:04:00`
 	ConstLayoutDate      = `2006-01-02`
 	ConstLayoutTime      = `15:04`
+	ConstIso8061         = `%Y-%m-%dT%TZ`
 )
 
 var ConstRoles = struct {

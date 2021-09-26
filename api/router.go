@@ -37,6 +37,12 @@ func GetRoutes() []*server.Route {
 		// Order
 		{Path: "/order", Methods: []string{"POST", "HEAD"}, Handler: InsertOrder, IsProtected: true},
 		{Path: "/order", Methods: []string{"GET", "HEAD"}, Handler: InsertOrder, IsProtected: true},
-		{Path: "/order/ticket/{order_ticket:[a-zA-Z0-9_-]+}", Methods: []string{"DELETE", "HEAD"}, Handler: DeleteOrderTicket, IsProtected: true},
+		{Path: "/order/{id:[0-9]+}/ticket", Methods: []string{"GET", "HEAD"}, Handler: GetOrderTicketsPDF, IsProtected: true},
+		{Path: "/order/ticket/{uuid:[a-zA-Z0-9_-]+}", Methods: []string{"DELETE", "HEAD"}, Handler: DeleteOrderTicket, IsProtected: true},
+
+		// Payment
+		{Path: "/payment/{order_id:[0-9]+}/mercadopago", Methods: []string{"POST", "HEAD"}, Handler: InsertPaymentMercadoPago, IsProtected: true},
+		{Path: "/payment/{order_id:[0-9]+}/cashier", Methods: []string{"POST", "HEAD"}, Handler: InsertPaymentCashier, IsProtected: true},
+		{Path: "/payment/mercadopago", Methods: []string{"POST", "HEAD"}, Handler: UpdatePaymentMercadoPago, IsProtected: false},
 	}
 }

@@ -49,12 +49,34 @@ type Order struct {
 	Client  *User     `json:"client,omitempty"`
 	Tickets []Ticket  `json:"tickets,omitempty"`
 	Price   int       `json:"price"`
-	Paid    bool      `json:"paid"`
+	Payment *Payment  `json:"payment,omitempty"`
 	Created time.Time `json:"created"`
 	Updated time.Time `json:"updated"`
 }
 
 type Ticket struct {
 	ID    int    `json:"id,omitempty"`
+	UUID  string `json:"uuid,omitempty"`
 	Event *Event `json:"event,omitempty"`
+}
+
+type TicketHTML struct {
+	ID                 int
+	Firstname          string
+	Lastname           string
+	EventStartDateTime string
+	EventEndDateTime   string
+	Price              int
+	Image              string
+}
+
+type TicketPDF struct {
+	URL string `json:"url"`
+}
+
+type OrderHTML struct {
+	ID            int
+	Firstname     string
+	Lastname      string
+	PaymentMethod string
 }

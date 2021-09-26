@@ -12,6 +12,7 @@ import (
 
 type ResponseWriter struct {
 	Writer http.ResponseWriter
+	Logger *log.Entry
 }
 
 func NewResponseWriter(w http.ResponseWriter) *ResponseWriter {
@@ -75,6 +76,39 @@ func (r *ResponseWriter) writePlainJSONResponse(statusCode int, data interface{}
 	if code, err := r.Writer.Write(b); err != nil {
 		fmt.Sprintf("could not response - code: %d", code)
 	}
+}
+
+func (r *ResponseWriter) StartLogger(handlerName string) {
+	logger := config.GetLogger()
+	logger = logger.WithFields(log.Fields{
+		"handler": handlerName,
+	})
+
+	r.Logger = logger
+}
+
+func (r *ResponseWriter) LogInfo(data interface{}, message string) {
+	if r.Logger == nil {
+		return
+	}
+
+	r.Logger.WithFields(log.Fields{
+		"data": data,
+	}).Info(message)
+}
+
+func (r *ResponseWriter) LogError(err error, message string) {
+	if r.Logger == nil {
+		return
+	}
+
+	if err == nil {
+		err = errors.New(message)
+	}
+
+	r.Logger.WithFields(log.Fields{
+		"error": err.Error(),
+	}).Error(message)
 }
 
 func (r *ResponseWriter) WriteJSON(statusCode int, data interface{}, err error, message string) {
