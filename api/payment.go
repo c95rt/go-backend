@@ -165,6 +165,10 @@ func UpdatePaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 			return
 		}
 
+		for _, ticket := range order.Tickets {
+			order.Price += ticket.Event.Price
+		}
+
 		pdfBuffer, err := helpers.GenerateTicketsPDF(order)
 		if err != nil {
 			w.LogError(err, "failed generating PDF")
@@ -188,6 +192,7 @@ func UpdatePaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 			Firstname:     order.Client.Firstname,
 			Lastname:      order.Client.Lastname,
 			PaymentMethod: db.ConstPaymentMethods.MercadoPago.Name,
+			OrderPrice:    order.Price,
 		})
 		if err != nil {
 			w.LogError(err, "failed sending email")
@@ -290,6 +295,7 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 			Firstname:     order.Client.Firstname,
 			Lastname:      order.Client.Lastname,
 			PaymentMethod: db.ConstPaymentMethods.Cashier.Name,
+			OrderPrice:    order.Price,
 		})
 		if err != nil {
 			w.LogError(err, "failed sending email")

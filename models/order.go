@@ -79,4 +79,5 @@ type OrderHTML struct {
 	Firstname     string
 	Lastname      string
 	PaymentMethod string
+	OrderPrice    int
 }
