@@ -30,7 +30,7 @@ COPY --from=builder /go/bin/backend /backend
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /
 COPY --from=builder /build/templates /templates
-COPY --from=builder /build/wkhtmltopdf /bin
+COPY --from=builder /build/wkhtmltopdf /usr/bin
 ENV ZONEINFO=/zoneinfo.zip
 RUN chmod +x /bin/wkhtmltopdf
 
