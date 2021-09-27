@@ -17,6 +17,9 @@ RUN apk update && apk upgrade && apk add --update --no-cache \
     libgcc libstdc++ libx11 glib libxrender libxext libintl \
     ttf-dejavu ttf-droid ttf-freefont \
     nodejs imagemagick
+RUN apk --no-cache add msttcorefonts-installer fontconfig && \
+    update-ms-fonts && \
+    fc-cache -f
 
 COPY ./parqueoasis-backend .
 
@@ -39,8 +42,5 @@ killall Xvfb\
     chmod +x /usr/bin/wkhtmltopdf-headless
 
 RUN ln -s /usr/share/fonts /usr/lib/fonts
-RUN apk --no-cache add msttcorefonts-installer fontconfig && \
-    update-ms-fonts && \
-    fc-cache -f
 
 CMD ["/backend", "backend-up"]
