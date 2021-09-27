@@ -18,7 +18,17 @@ RUN apk update && apk upgrade && apk add --update --no-cache \
     ttf-dejavu ttf-droid ttf-freefont \
     nodejs imagemagick
 
-COPY ./parqueoasis-backend/wkhtmltopdf /bin
+COPY ./parqueoasis-backend .
+
+RUN go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/backend
+
+FROM ubuntu
+COPY --from=builder /go/bin/backend /backend
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /
+COPY --from=builder /build/templates /templates
+COPY --from=builder /build/wkhtmltopdf /bin
+ENV ZONEINFO=/zoneinfo.zip
 RUN chmod +x /bin/wkhtmltopdf
 
 RUN echo $'#!/usr/bin/env sh\n\
@@ -32,16 +42,5 @@ RUN ln -s /usr/share/fonts /usr/lib/fonts
 RUN apk --no-cache add msttcorefonts-installer fontconfig && \
     update-ms-fonts && \
     fc-cache -f
-
-COPY ./parqueoasis-backend .
-
-RUN go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/backend
-
-FROM ubuntu
-COPY --from=builder /go/bin/backend /backend
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /
-COPY --from=builder /build/templates /templates
-ENV ZONEINFO=/zoneinfo.zip
 
 CMD ["/backend", "backend-up"]
