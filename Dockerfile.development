@@ -7,40 +7,26 @@ ENV GOARCH=amd64
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 
-RUN apk add git
-RUN apk --no-cache add tzdata zlib-dev ttf-linux-libertine freetype freetype-dev fontconfig libx11-dev libxext-dev libxrender-dev ttf-freefont dbus xvfb curl qt5-qtbase
-
 RUN apk update && apk upgrade && \
   apk add --no-cache bash git openssh
-RUN apk add -U --no-cache ca-certificates
-RUN apk update && apk upgrade && apk add --update --no-cache \
-    libgcc libstdc++ libx11 glib libxrender libxext libintl \
-    ttf-dejavu ttf-droid ttf-freefont \
-    nodejs imagemagick
-RUN apk --no-cache add msttcorefonts-installer fontconfig && \
-    update-ms-fonts && \
-    fc-cache -f
+RUN apk add -U --no-cache gcc g++ libc-dev ca-certificates
 
 COPY ./parqueoasis-backend .
 
 RUN go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/backend
 
-FROM ubuntu
+FROM surnet/alpine-wkhtmltopdf:3.12-0.12.6-small as wkhtmltopdf
+FROM alpine AS projectservice
+
+RUN apk add --no-cache libstdc++ libx11 libxrender libxext libssl1.1 fontconfig freetype ttf-dejavu ttf-droid ttf-freefont ttf-liberation ttf-ubuntu-font-family && apk add --no-cache --virtual .build-deps msttcorefonts-installer && update-ms-fonts && fc-cache -f && rm -rf /tmp/* && apk del .build-deps
+RUN apk add ca-certificates
+COPY --from=wkhtmltopdf /bin/wkhtmltopdf /bin/wkhtmltopdf
+#FROM ubuntu
 COPY --from=builder /go/bin/backend /backend
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /
 COPY --from=builder /build/templates /templates
 COPY --from=builder /build/wkhtmltopdf /usr/bin
 ENV ZONEINFO=/zoneinfo.zip
-RUN chmod +x /usr/bin/wkhtmltopdf
-
-RUN echo $'#!/usr/bin/env sh\n\
-Xvfb :0 -screen 0 640x480x8 -ac +extension GLX +render -noreset & \n\
-DISPLAY=:0.0 wkhtmltopdf $@ \n\
-killall Xvfb\
-' > /usr/bin/wkhtmltopdf-headless && \
-    chmod +x /usr/bin/wkhtmltopdf-headless
-
-RUN ln -s /usr/share/fonts /usr/lib/fonts
 
 CMD ["/backend", "backend-up"]
