@@ -8,7 +8,7 @@ ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 
 RUN apk add git
-RUN apk --no-cache add tzdata zlib-dev ttf-ubuntu-font-family ttf-linux-libertine freetype freetype-dev fontconfig libx11-dev libxext-dev libxrender-dev ttf-freefont dbus xvfb curl qt5-qtbase
+RUN apk --no-cache add tzdata zlib-dev ttf-linux-libertine freetype freetype-dev fontconfig libx11-dev libxext-dev libxrender-dev ttf-freefont dbus xvfb curl qt5-qtbase
 
 RUN apk update && apk upgrade && \
   apk add --no-cache bash git openssh
