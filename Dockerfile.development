@@ -18,7 +18,7 @@ RUN apk update && apk upgrade && apk add --update --no-cache \
     ttf-dejavu ttf-droid ttf-freefont \
     nodejs imagemagick
 
-COPY wkhtmltopdf /bin
+COPY ./parqueoasis-backend/wkhtmltopdf /bin
 RUN chmod +x /bin/wkhtmltopdf
 
 RUN echo $'#!/usr/bin/env sh\n\
