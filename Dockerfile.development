@@ -12,7 +12,7 @@ RUN apk update && apk upgrade && \
 RUN apk add -U --no-cache ca-certificates
 RUN apk add --no-cache wkhtmltopdf
 
-COPY ./backend .
+COPY ./parqueoasis-backend .
 
 RUN go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/backend
 
