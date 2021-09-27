@@ -32,7 +32,7 @@ COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /
 COPY --from=builder /build/templates /templates
 COPY --from=builder /build/wkhtmltopdf /usr/bin
 ENV ZONEINFO=/zoneinfo.zip
-RUN chmod +x /bin/wkhtmltopdf
+RUN chmod +x /usr/bin/wkhtmltopdf
 
 RUN echo $'#!/usr/bin/env sh\n\
 Xvfb :0 -screen 0 640x480x8 -ac +extension GLX +render -noreset & \n\
