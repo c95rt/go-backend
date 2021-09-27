@@ -10,8 +10,6 @@ import (
 
 type OrderStorage interface {
 	InsertOrder(userID int, clientID int, events []models.Event, ticketsByEvent map[int]int) (*models.Order, error)
-	GetOrderByTicketUUID(ticketUUID string) (*models.Order, error)
-	DeleteTicket(ticketID int) error
 	GetOrderByID(orderID int) (*models.Order, error)
 	GetOrderByExternalReference(externalReference string) (*models.Order, error)
 }
@@ -32,72 +30,6 @@ const (
 		uuid = :uuid,
 		order_id = :order_id,
 		event_id = :event_id
-	`
-
-	getOrderByTicketUUID = `
-	SELECT
-		ticket.id,
-		event.id,
-		event.start_date_time,
-		event.end_date_time,
-		orders.id,
-		orders.created,
-		orders.updated,
-		COALESCE(
-			(
-				SELECT
-					JSON_OBJECT(
-						'id', payment.id,
-						'amount', payment.amount,
-						'reference_id', payment.preference_id,
-						'created', payment.created,
-						'updated', payment.updated,
-						'user', JSON_OBJECT(
-							'id', payment_user.id,
-							'firstname', payment_user.firstname,
-							'lastname', payment_user.lastname,
-							'email', payment_user.email
-						),
-						'status', JSON_OBJECT(
-							'id', payment_status.id,
-							'name', payment_status.name
-						),
-						'method', JSON_OBJECT(
-							'id', payment_method.id,
-							'name', payment_method.name
-						)
-					)
-				FROM
-					payment
-				LEFT JOIN
-					payment_method ON (payment_method.id = payment.method_id)
-				LEFT JOIN
-					payment_status ON (payment_status.id = payment.status_id)
-				LEFT JOIN
-					user payment_user ON (payment.user_id = payment_user.id)
-				WHERE
-					payment.id = (
-						SELECT
-							id
-						FROM
-							payment
-						WHERE
-							order_id = orders.id
-						ORDER BY
-							id DESC
-						LIMIT 1
-					) AND
-					payment.active = true
-			), '{}'
-		)
-	FROM
-		ticket
-	INNER JOIN
-		orders ON (orders.id = ticket.order_id AND orders.active = true)
-		event ON (event.id = ticket.event_id AND event.active = true)
-	WHERE
-		ticket.uuid = :uuid AND
-		ticket.active = true
 	`
 
 	getOrderByID = `
@@ -164,6 +96,7 @@ const (
 							JSON_EXTRACT(JSON_OBJECT(
 								'id', ticket.id,
 								'uuid', ticket.uuid,
+								'used', ticket.used,
 								'event', JSON_OBJECT(
 									'id', event.id,
 									'price', event.price,
@@ -258,6 +191,7 @@ const (
 							JSON_EXTRACT(JSON_OBJECT(
 								'id', ticket.id,
 								'uuid', ticket.uuid,
+								'used', ticket.used,
 								'event', JSON_OBJECT(
 									'id', event.id,
 									'price', event.price,
@@ -403,109 +337,6 @@ func (db *DB) insertTicketTx(tx Tx, orderID int, eventID int, time int) (int, er
 	}
 
 	return int(id), nil
-}
-
-func (db *DB) GetOrderByTicketUUID(ticketUUID string) (*models.Order, error) {
-	stmt, err := db.PrepareNamed(getOrderByTicketUUID)
-	if err != nil {
-		return nil, err
-	}
-
-	args := map[string]interface{}{
-		"uuid": ticketUUID,
-	}
-
-	var ticket models.Ticket
-	var event models.Event
-	var order models.Order
-	var paymentBT []byte
-
-	row := stmt.QueryRow(args)
-	if err := row.Scan(
-		&ticket.ID,
-		&event.ID,
-		&event.StartDateTime,
-		&event.EndDateTime,
-		&order.ID,
-		&order.Created,
-		&order.Updated,
-		&paymentBT,
-	); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	if err := json.Unmarshal(paymentBT, &order.Payment); err != nil {
-		return nil, err
-	}
-
-	ticket.Event = &event
-	order.Tickets = append(order.Tickets, ticket)
-
-	return &order, nil
-}
-
-func (db *DB) DeleteTicket(ticketID int) error {
-	tx, err := db.NewTx()
-	if err != nil {
-		return errors.Wrap(err, "failed to start transaction")
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-			return
-		}
-
-		tx.Commit()
-	}()
-
-	err = db.deleteTicketTx(tx, ticketID)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-const (
-	deleteTicket = `
-	UPDATE
-		ticket
-	SET
-		active = :active
-	WHERE
-		ticket.id = :ticket_id;
-	`
-)
-
-func (db *DB) deleteTicketTx(tx Tx, ticketID int) error {
-	stmt, err := tx.PrepareNamed(deleteTicket)
-	if err != nil {
-		return err
-	}
-
-	args := map[string]interface{}{
-		"ticket_id": ticketID,
-	}
-
-	result, err := stmt.Exec(args)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if int(rowsAffected) != 1 {
-		return errors.Errorf("expected %d and deleted %d", 1, rowsAffected)
-	}
-
-	return nil
 }
 
 func (db *DB) GetOrderByID(orderID int) (*models.Order, error) {

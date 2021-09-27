@@ -31,3 +31,9 @@ var UpdateUserPasswordRules = govalidator.MapData{
 var SendRememberTokenRules = govalidator.MapData{
 	"email": []string{"required"},
 }
+
+type PasswordRecoverHTML struct {
+	Firstname string
+	Lastname  string
+	URL       string
+}

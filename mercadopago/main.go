@@ -18,11 +18,11 @@ const (
 )
 
 type MP struct {
-	BaseURL         string
-	Token           string
-	NotificationURL string
-	PathPreferences string
-	GetPaymentURL   string
+	BaseURL          string
+	Token            string
+	NotificationPath string
+	PathPreferences  string
+	GetPaymentURL    string
 }
 
 var MPActions interface {
@@ -53,9 +53,9 @@ type MPGetPaymentReponse struct {
 	ExternalReference string `json:"external_reference"`
 }
 
-func (mp *MP) MPCreatePreference(order *models.Order) (*MPCreatePreferenceResponse, error) {
+func (mp *MP) MPCreatePreference(order *models.Order, baseURL string) (*MPCreatePreferenceResponse, error) {
 	requestBody := MPCreatePreferenceRequest{
-		NotificationURL:   mp.NotificationURL,
+		NotificationURL:   fmt.Sprintf("%s%s", baseURL, mp.NotificationPath),
 		ExternalReference: shortuuid.New(),
 	}
 

@@ -72,7 +72,7 @@ func InsertPaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 		order.Price += ticket.Event.Price
 	}
 
-	response, err := ctx.MercadoPago.MPCreatePreference(order)
+	response, err := ctx.MercadoPago.MPCreatePreference(order, ctx.Config.BackendBaseURL)
 	if err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "problems with Mercado Pago")
 		return

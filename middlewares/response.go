@@ -11,8 +11,9 @@ import (
 )
 
 type ResponseWriter struct {
-	Writer http.ResponseWriter
-	Logger *log.Entry
+	Writer   http.ResponseWriter
+	Logger   *log.Entry
+	Language string
 }
 
 func NewResponseWriter(w http.ResponseWriter) *ResponseWriter {
@@ -133,6 +134,29 @@ func (r *ResponseWriter) WriteJSON(statusCode int, data interface{}, err error, 
 	r.writePlainJSONResponse(statusCode, data)
 }
 
+func (r *ResponseWriter) Write(statusCode int, data interface{}, err error, message *NewRM) {
+	finalMessage := *message
+	logger := config.GetLogger()
+	fields := make(log.Fields)
+	fields["status_code"] = statusCode
+	if statusCode >= 200 && statusCode <= 299 {
+		logger.WithFields(fields).Info("success")
+	}
+	if statusCode >= 300 {
+		if data == nil {
+			data = map[string]interface{}{
+				"error": finalMessage[r.Language],
+			}
+		}
+		if err == nil {
+			err = errors.Errorf(finalMessage[r.Language])
+		}
+		fields["errors"] = data
+		logger.WithFields(fields).Error(err)
+	}
+	r.writePlainJSONResponse(statusCode, data)
+}
+
 func (r *ResponseWriter) JSON(code int, data interface{}) {
 	r.writeJSONResponse(code, nil, data)
 }
@@ -173,4 +197,11 @@ func (r *ResponseWriter) Error(code int, msg string, opts ...ErrOption) {
 		With(err)
 	}
 	r.writeJSONResponse(code, []*errorResponse{err}, nil)
+}
+
+func (r *ResponseWriter) GetRequestLanguage(request *http.Request) {
+	r.Language = Language.Spanish
+	if language, ok := LanguageMap[request.Header.Get("Accept-Language")]; ok {
+		r.Language = language
+	}
 }

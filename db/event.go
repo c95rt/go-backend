@@ -28,7 +28,6 @@ const (
 	getEventByID = `
 	SELECT
 		id,
-		date,
 		start_date_time,
 		end_date_time,
 		price,
@@ -76,7 +75,7 @@ const (
 
 	countEvents = `
 	SELECT
-		count(id)
+		COUNT(id)
 	FROM
 		event
 	WHERE

@@ -9,7 +9,7 @@ type Payment struct {
 	User         *User          `json:"user,omitempty"`
 	PreferenceID string         `json:"preference_id,omitempty"`
 	Order        *Order         `json:"order,omitempty"`
-	Status       *PaymentStatus `json:"payment_status,omitempty"`
+	Status       *PaymentStatus `json:"status,omitempty"`
 	Created      time.Time      `json:"created"`
 	Updated      time.Time      `json:"updated"`
 }

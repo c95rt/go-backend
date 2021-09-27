@@ -57,6 +57,10 @@ func GenerateTicketsPDF(order *models.Order) (*bytes.Buffer, error) {
 	r := RequestPdf{}
 
 	for _, ticket := range order.Tickets {
+		if ticket.Used == 1 {
+			continue
+		}
+
 		img, err := qrcode.New(ticket.UUID, qrcode.Medium)
 		if err != nil {
 			return nil, err

@@ -38,9 +38,12 @@ var GetOrdersRules = govalidator.MapData{
 	"limit_to":     []string{"numeric"},
 }
 
-var DeleteOrderTicketOpts struct {
-	OrderID  int `json:"order_id"`
-	TicketID int `json:"ticket_id"`
+type UpdateTicketOpts struct {
+	EventID int `json:"event_id"`
+}
+
+var UpdateTicketRules = govalidator.MapData{
+	"event_id": []string{"required", "numeric"},
 }
 
 type Order struct {
@@ -55,9 +58,12 @@ type Order struct {
 }
 
 type Ticket struct {
-	ID    int    `json:"id,omitempty"`
-	UUID  string `json:"uuid,omitempty"`
-	Event *Event `json:"event,omitempty"`
+	ID     int    `json:"id,omitempty"`
+	UUID   string `json:"uuid,omitempty"`
+	Event  *Event `json:"event,omitempty"`
+	Used   int    `json:"used"`
+	Paid   *bool  `json:"paid,omitempty"`
+	Client *User  `json:"client,omitempty"`
 }
 
 type TicketHTML struct {

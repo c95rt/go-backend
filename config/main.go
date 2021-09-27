@@ -15,18 +15,22 @@ import (
 )
 
 type Configuration struct {
-	JWTSecret   string `env:"JWT_SECRET,required"`
-	Port        int    `env:"PORT,default=3001"`
-	Timeout     int    `env:"TIMEOUT,default=1"`
-	DB          db.Storage
-	SQL         database
-	AwsSMTP     awsSMTP
-	AwsS3       awsS3
-	MercadoPago mercadopagoConf
-	Mail        mail
-	Environment string `env:"ENVIRONMENT,default=development"`
-	CasbinModel string `env:"RBAC_FILE,default=config/rbac.conf"`
-	AppName     string `env:"APP_NAME,default=app"`
+	JWTSecret                     string `env:"JWT_SECRET,required"`
+	Port                          int    `env:"PORT,default=3001"`
+	Timeout                       int    `env:"TIMEOUT,default=1"`
+	DB                            db.Storage
+	SQL                           database
+	AwsSMTP                       awsSMTP
+	AwsS3                         awsS3
+	MercadoPago                   mercadopagoConf
+	Mail                          mail
+	Environment                   string `env:"ENVIRONMENT,default=development"`
+	CasbinModel                   string `env:"RBAC_FILE,default=config/rbac.conf"`
+	FrontendBaseURL               string `env:"FRONTEND_BASEURL"`
+	BackofficeBaseURL             string `env:"BACKOFFICE_BASEURL"`
+	BackofficePasswordRecoverPath string `env:"BACKOFFICE_PASSWORD_RECOVER_PATH"`
+	BackendBaseURL                string `env:"BACKEND_BASEURL"`
+	AppName                       string `env:"APP_NAME,default=app"`
 }
 
 type database struct {
@@ -46,11 +50,11 @@ type awsSMTP struct {
 }
 
 type mercadopagoConf struct {
-	BaseURL         string `env:"MERCADOPAGO_BASEURL"`
-	Token           string `env:"MERCADOPAGO_TOKEN"`
-	PathPreferences string `env:"MERCADOPAGO_PATH_PREFERENCES"`
-	NotificationURL string `env:"MERCADOPAGO_NOTIFICATION_URL"`
-	GetPaymentURL   string `env:"MERCADOPAGO_GET_PAYMENT_URL"`
+	BaseURL          string `env:"MERCADOPAGO_BASEURL"`
+	Token            string `env:"MERCADOPAGO_TOKEN"`
+	PathPreferences  string `env:"MERCADOPAGO_PATH_PREFERENCES"`
+	NotificationPath string `env:"MERCADOPAGO_NOTIFICATION_PATH"`
+	GetPaymentURL    string `env:"MERCADOPAGO_GET_PAYMENT_URL"`
 }
 
 type awsS3 struct {
@@ -62,11 +66,12 @@ type awsS3 struct {
 }
 
 type mail struct {
-	PaymentSuccess mailPaymentSuccess
-	NameFrom       string `env:"MAIL_NAME_FROM"`
-	EmailFrom      string `env:"MAIL_EMAIL_FROM"`
-	Folder         string `env:"MAIL_FOLDER"`
-	Path           string `env:"MAIL_PATH"`
+	PaymentSuccess  mailPaymentSuccess
+	PasswordRecover mailPasswordRecover
+	NameFrom        string `env:"MAIL_NAME_FROM"`
+	EmailFrom       string `env:"MAIL_EMAIL_FROM"`
+	Folder          string `env:"MAIL_FOLDER"`
+	Path            string `env:"MAIL_PATH"`
 }
 
 type mailPaymentSuccess struct {
@@ -75,7 +80,13 @@ type mailPaymentSuccess struct {
 	FileName string `env:"MAIL_PAYMENT_SUCCESS_FILENAME"`
 }
 
+type mailPasswordRecover struct {
+	Subject  string `env:"MAIL_PASSWORD_RECOVER_SUBJECT"`
+	Template string `env:"MAIL_PASSWORD_RECOVER_TEMPLATE"`
+}
+
 type AppContext struct {
+	Language    string
 	Config      Configuration
 	SQLConn     *sqlx.DB
 	DB          db.Storage
@@ -100,11 +111,11 @@ func CreateNewConnectionSMTP(conf awsSMTP) *gomail.Dialer {
 
 func CreateMercadoPagoIntegration(conf mercadopagoConf) *mercadopago.MP {
 	mp := mercadopago.MP{
-		BaseURL:         conf.BaseURL,
-		Token:           conf.Token,
-		PathPreferences: conf.PathPreferences,
-		NotificationURL: conf.NotificationURL,
-		GetPaymentURL:   conf.GetPaymentURL,
+		BaseURL:          conf.BaseURL,
+		Token:            conf.Token,
+		PathPreferences:  conf.PathPreferences,
+		NotificationPath: conf.NotificationPath,
+		GetPaymentURL:    conf.GetPaymentURL,
 	}
 
 	return &mp
