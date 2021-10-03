@@ -58,11 +58,10 @@ type mercadopagoConf struct {
 }
 
 type awsS3 struct {
-	S3Region     string `env:"S3_REGION,required"`
-	S3Bucket     string `env:"S3_BUCKET,required"`
-	S3Url        string `env:"S3_URL,required"`
-	S3PathTicket string `env:"S3_PATH_TICKET,default=ticket"`
-	S3PathOrder  string `env:"S3_PATH_ORDER,default=order"`
+	S3Region    string `env:"S3_REGION,required"`
+	S3Bucket    string `env:"S3_BUCKET,required"`
+	S3Url       string `env:"S3_URL,required"`
+	S3PathOrder string `env:"S3_PATH_ORDER,default=order"`
 }
 
 type mail struct {

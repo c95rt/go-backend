@@ -68,9 +68,7 @@ func InsertPaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 		}
 	}
 
-	for _, ticket := range order.Tickets {
-		order.Price += ticket.Event.Price
-	}
+	order.Price = order.InitialTickets * order.Event.Price
 
 	response, err := ctx.MercadoPago.MPCreatePreference(order, ctx.Config.BackendBaseURL)
 	if err != nil {
@@ -165,11 +163,9 @@ func UpdatePaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 			return
 		}
 
-		for _, ticket := range order.Tickets {
-			order.Price += ticket.Event.Price
-		}
+		order.Price = order.InitialTickets * order.Event.Price
 
-		pdfBuffer, err := helpers.GenerateTicketsPDF(order)
+		pdfBuffer, err := helpers.GenerateOrderPDF(order)
 		if err != nil {
 			w.LogError(err, "failed generating PDF")
 			return
@@ -246,9 +242,7 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 		}
 	}
 
-	for _, ticket := range order.Tickets {
-		order.Price += ticket.Event.Price
-	}
+	order.Price = order.InitialTickets * order.Event.Price
 
 	newOpts := db.InsertPaymentOpts{
 		MethodID:     db.ConstPaymentMethods.MercadoPago.ID,
@@ -265,13 +259,13 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 		return
 	}
 
-	pdfBuffer, err := helpers.GenerateTicketsPDF(order)
+	pdfBuffer, err := helpers.GenerateOrderPDF(order)
 	if err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed generating pdfs")
 		return
 	}
 
-	url, err := helpers.AddFileToS3(ctx, pdfBuffer, fmt.Sprintf("%s/%d.pdf", ctx.Config.AwsS3.S3PathTicket, order.ID))
+	url, err := helpers.AddFileToS3(ctx, pdfBuffer, fmt.Sprintf("%s/%d/%d.pdf", ctx.Config.AwsS3.S3PathOrder, userInfo.ID, order.ID))
 	if err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed uploading pdf")
 		return
@@ -304,7 +298,7 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 		w.LogInfo(nil, "success sending email")
 	}(ctx, order, pdfBuffer)
 
-	w.WriteJSON(http.StatusOK, models.TicketPDF{
+	w.WriteJSON(http.StatusOK, models.OrderPDF{
 		URL: url,
 	}, nil, "")
 	return

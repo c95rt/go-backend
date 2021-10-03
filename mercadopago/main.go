@@ -59,17 +59,15 @@ func (mp *MP) MPCreatePreference(order *models.Order, baseURL string) (*MPCreate
 		ExternalReference: shortuuid.New(),
 	}
 
-	for _, ticket := range order.Tickets {
-		item := MPPreferenceItem{
-			ID:          strconv.Itoa(ticket.ID),
-			Title:       "Entrada Parque",
-			Description: fmt.Sprintf("%s-%s", ticket.Event.StartDateTime.String(), ticket.Event.EndDateTime.String()),
-			Quantity:    1,
-			UnitPrice:   ticket.Event.Price,
-		}
-
-		requestBody.Items = append(requestBody.Items, item)
+	item := MPPreferenceItem{
+		ID:          strconv.Itoa(order.ID),
+		Title:       "Entrada Parque",
+		Description: fmt.Sprintf("%s-%s", order.Event.StartDateTime.String(), order.Event.EndDateTime.String()),
+		Quantity:    order.Tickets,
+		UnitPrice:   order.Event.Price,
 	}
+
+	requestBody.Items = append(requestBody.Items, item)
 
 	responseBody, err := mpPost(fmt.Sprintf("%s%s?access_token=%s", mp.BaseURL, mp.PathPreferences, mp.Token), &requestBody)
 	if err != nil {

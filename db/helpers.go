@@ -5,6 +5,6 @@ import (
 	"time"
 )
 
-func GenerateTicketUUID(orderID int, turn int) string {
-	return fmt.Sprintf("%dx%dx%d", orderID, time.Now().UnixNano(), turn)
+func GenerateTicketUUID() string {
+	return fmt.Sprintf("PO%d", time.Now().Unix())
 }

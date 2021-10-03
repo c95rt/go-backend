@@ -53,35 +53,30 @@ func (r *RequestPdf) GeneratePDF() (*bytes.Buffer, error) {
 	return pdfg.Buffer(), nil
 }
 
-func GenerateTicketsPDF(order *models.Order) (*bytes.Buffer, error) {
+func GenerateOrderPDF(order *models.Order) (*bytes.Buffer, error) {
 	r := RequestPdf{}
 
-	for _, ticket := range order.Tickets {
-		if ticket.Used == 1 {
-			continue
-		}
+	img, err := qrcode.New(order.TransactionID, qrcode.Medium)
+	if err != nil {
+		return nil, err
+	}
 
-		img, err := qrcode.New(ticket.UUID, qrcode.Medium)
-		if err != nil {
-			return nil, err
-		}
+	base64, err := EncodeImage(img.Image(256))
+	if err != nil {
+		return nil, err
+	}
 
-		base64, err := EncodeImage(img.Image(256))
-		if err != nil {
-			return nil, err
-		}
-
-		if err := r.ParseTemplate("./templates/pdf/ticket.html", models.TicketHTML{
-			ID:                 ticket.ID,
-			Firstname:          RemoveAccents(order.Client.Firstname),
-			Lastname:           order.Client.Lastname,
-			EventStartDateTime: ticket.Event.StartDateTime.String(),
-			EventEndDateTime:   ticket.Event.EndDateTime.String(),
-			Price:              ticket.Event.Price,
-			Image:              base64,
-		}); err != nil {
-			return nil, err
-		}
+	if err := r.ParseTemplate("./templates/pdf/order.html", models.OrderPDFHTML{
+		ID:                 order.ID,
+		Firstname:          RemoveAccents(order.Client.Firstname),
+		Lastname:           order.Client.Lastname,
+		EventStartDateTime: order.Event.StartDateTime.String(),
+		EventEndDateTime:   order.Event.EndDateTime.String(),
+		EventType:          order.Event.Type.Name,
+		Price:              order.Event.Price * order.InitialTickets,
+		Image:              base64,
+	}); err != nil {
+		return nil, err
 	}
 
 	mem, err := r.GeneratePDF()

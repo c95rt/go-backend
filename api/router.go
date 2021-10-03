@@ -37,15 +37,12 @@ func GetRoutes() []*server.Route {
 
 		// Order
 		{Path: "/order", Methods: []string{"POST", "HEAD"}, Handler: InsertOrder, IsProtected: true},
-		{Path: "/order", Methods: []string{"GET", "HEAD"}, Handler: InsertOrder, IsProtected: true},
-		{Path: "/order/{id:[0-9]+}/ticket", Methods: []string{"GET", "HEAD"}, Handler: GetOrderTicketsPDF, IsProtected: true},
-
-		// Ticket
-		{Path: "/ticket/uuid/{uuid:[a-zA-Z0-9_-]+}", Methods: []string{"GET", "HEAD"}, Handler: GetTicketByUUID, IsProtected: true},
-		{Path: "/ticket/{id:[0-9]+}", Methods: []string{"GET", "HEAD"}, Handler: GetTicket, IsProtected: true},
-		{Path: "/ticket/uuid/{uuid:[a-zA-Z0-9_-]+}", Methods: []string{"PUT", "HEAD"}, Handler: UseTicket, IsProtected: true},
-		{Path: "/ticket/{id:[0-9]+}", Methods: []string{"PUT", "HEAD"}, Handler: UpdateTicket, IsProtected: true},
-		{Path: "/ticket", Methods: []string{"GET", "HEAD"}, Handler: GetTickets, IsProtected: true},
+		{Path: "/order", Methods: []string{"GET", "HEAD"}, Handler: GetOrders, IsProtected: true},
+		{Path: "/order/{id:[0-9]+}/pdf", Methods: []string{"GET", "HEAD"}, Handler: GetOrderPDF, IsProtected: true},
+		{Path: "/order/{id:[0-9]+}", Methods: []string{"PATCH", "HEAD"}, Handler: UseOrder, IsProtected: true},
+		{Path: "/order/{id:[0-9]+}", Methods: []string{"PUT", "HEAD"}, Handler: UpdateOrder, IsProtected: true},
+		{Path: "/sales", Methods: []string{"GET", "HEAD"}, Handler: GetSalesSummary, IsProtected: true},
+		{Path: "/sales/cashier", Methods: []string{"GET", "HEAD"}, Handler: GetCashierSummary, IsProtected: true},
 
 		// Payment
 		{Path: "/payment/{order_id:[0-9]+}/mercadopago", Methods: []string{"POST", "HEAD"}, Handler: InsertPaymentMercadoPago, IsProtected: true},

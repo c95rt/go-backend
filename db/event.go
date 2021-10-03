@@ -20,51 +20,63 @@ type EventStorage interface {
 const (
 	insertEvents = `
 	INSERT INTO
-		event (start_date_time, end_date_time, price)
+		event (event_type_id, start_date_time, end_date_time, price)
 	VALUES
 		%s
 	`
 
 	getEventByID = `
 	SELECT
-		id,
-		start_date_time,
-		end_date_time,
-		price,
-		created,
-		updated
+		event.id,
+		event_type.id,
+		event_type.name,
+		event.start_date_time,
+		event.end_date_time,
+		event.price,
+		event.created,
+		event.updated
 	FROM
 		event
+	INNER JOIN
+		event_type ON (event_type.id = event.event_type_id)
 	WHERE
-		active = 1 AND
-		id = :event_id
+		event.active = 1 AND
+		event.id = :event_id
 	`
 
 	getEventsByIDs = `
 	SELECT
-		id,
-		start_date_time,
-		end_date_time,
-		price,
-		created,
-		updated
+		event.id,
+		event_type.id,
+		event_type.name,
+		event.start_date_time,
+		event.end_date_time,
+		event.price,
+		event.created,
+		event.updated
 	FROM
 		event
+	INNER JOIN
+		event_type ON (event_type.id = event.event_type_id)
 	WHERE
-		active = 1 AND
-		id IN (:event_ids)
+		event.active = 1 AND
+		event.id IN (:event_ids)
 	`
 
 	getEvents = `
 	SELECT
-		id,
-		start_date_time,
-		end_date_time,
-		price,
-		created,
-		updated
+		event.id,
+		event_type.id,
+		event_type.name,
+		event.start_date_time,
+		event.end_date_time,
+		event.price,
+		event.created,
+		event.updated
 	FROM
 		event
+	INNER JOIN
+		event_type ON (event_type.id = event.event_type_id)
 	WHERE
 		event.active = 1
 		#FILTERS#
@@ -113,8 +125,8 @@ func (db *DB) insertEventsTx(tx Tx, opts *models.InsertEventsOpts) error {
 
 	for _, eventDate := range opts.Dates {
 		for _, eventDateTime := range eventDate.Times {
-			paramsArr = append(paramsArr, "(?,?,?)")
-			argsArr = append(argsArr, fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.StartTime), fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.EndTime), eventDateTime.Price)
+			paramsArr = append(paramsArr, "(?,?,?,?)")
+			argsArr = append(argsArr, opts.TypeID, fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.StartTime), fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.EndTime), eventDateTime.Price)
 		}
 	}
 
@@ -149,8 +161,11 @@ func (db *DB) GetEventByID(eventID int) (*models.Event, error) {
 	row := stmt.QueryRow(args)
 
 	var event models.Event
+	var eventType models.EventType
 	if err := row.Scan(
 		&event.ID,
+		&eventType.ID,
+		&eventType.Name,
 		&event.StartDateTime,
 		&event.EndDateTime,
 		&event.Price,
@@ -162,6 +177,8 @@ func (db *DB) GetEventByID(eventID int) (*models.Event, error) {
 		}
 		return nil, err
 	}
+
+	event.Type = &eventType
 
 	return &event, nil
 }
@@ -191,8 +208,11 @@ func (db *DB) GetEventsByIDs(eventIDs []int) ([]models.Event, error) {
 	var events []models.Event
 	for rows.Next() {
 		var event models.Event
+		var eventType models.EventType
 		if err := rows.Scan(
 			&event.ID,
+			&eventType.ID,
+			&eventType.Name,
 			&event.StartDateTime,
 			&event.EndDateTime,
 			&event.Price,
@@ -202,6 +222,7 @@ func (db *DB) GetEventsByIDs(eventIDs []int) ([]models.Event, error) {
 			return nil, err
 		}
 
+		event.Type = &eventType
 		events = append(events, event)
 	}
 
@@ -212,10 +233,14 @@ func (db *DB) GetEvents(opts *models.GetEventsOpts) (*models.EventsStruct, error
 	var filters string
 	args := make(map[string]interface{})
 	if opts.Date == "" {
-		filters += " AND start_date_time >= CONVERT_TZ(current_timestamp(), 'UTC', 'America/Santiago')"
+		filters += " AND event.start_date_time >= CONVERT_TZ(current_timestamp(), 'UTC', 'America/Santiago')"
 	} else {
-		filters += " AND DATE(start_date_time) = :date"
+		filters += " AND DATE(event.start_date_time) = :date"
 		args["date"] = opts.Date
+	}
+	if opts.TypeID != 0 {
+		filters += " AND event.event_type_id = :type_id"
+		args["type_id"] = opts.TypeID
 	}
 	if opts.LimitTo == 0 {
 		opts.LimitTo = 10
@@ -245,8 +270,11 @@ func (db *DB) GetEvents(opts *models.GetEventsOpts) (*models.EventsStruct, error
 	}
 	for rows.Next() {
 		var event models.Event
+		var eventType models.EventType
 		if err := rows.Scan(
 			&event.ID,
+			&eventType.ID,
+			&eventType.Name,
 			&event.StartDateTime,
 			&event.EndDateTime,
 			&event.Price,
@@ -256,6 +284,7 @@ func (db *DB) GetEvents(opts *models.GetEventsOpts) (*models.EventsStruct, error
 			return nil, err
 		}
 
+		event.Type = &eventType
 		events.Events = append(events.Events, event)
 	}
 
