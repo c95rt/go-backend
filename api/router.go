@@ -29,11 +29,13 @@ func GetRoutes() []*server.Route {
 		{Path: "/user/{id:[0-9]+}", Methods: []string{"PUT", "HEAD"}, Handler: UpdateUser, IsProtected: true},
 		{Path: "/user/{id:[0-9]+}", Methods: []string{"GET", "HEAD"}, Handler: GetUser, IsProtected: true},
 		{Path: "/user", Methods: []string{"GET", "HEAD"}, Handler: GetUsers, IsProtected: true},
+		{Path: "/role", Methods: []string{"GET", "HEAD"}, Handler: GetRoles, IsProtected: true},
 
 		// Event
 		{Path: "/event", Methods: []string{"POST", "HEAD"}, Handler: InsertEvents, IsProtected: true},
 		{Path: "/event", Methods: []string{"GET", "HEAD"}, Handler: GetEvents, IsProtected: false},
 		{Path: "/event/{id:[0-9]+}", Methods: []string{"GET", "HEAD"}, Handler: GetEvent, IsProtected: false},
+		{Path: "/event/type", Methods: []string{"GET", "HEAD"}, Handler: GetEventTypes, IsProtected: true},
 
 		// Order
 		{Path: "/order", Methods: []string{"POST", "HEAD"}, Handler: InsertOrder, IsProtected: true},

@@ -294,3 +294,21 @@ func InsertUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.R
 
 	w.WriteJSON(http.StatusNoContent, nil, nil, "")
 }
+
+func GetRoles(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	userInfo := models.InfoUser{}
+	mapstructure.Decode(r.Context().Value("user"), &userInfo)
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "Rol Inválido")
+		return
+	}
+
+	roles, err := ctx.DB.GetRoles()
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "Error del servidor")
+		return
+	}
+
+	w.WriteJSON(http.StatusOK, roles, nil, "")
+}

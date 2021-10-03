@@ -15,6 +15,7 @@ type EventStorage interface {
 	GetEventByID(eventID int) (*models.Event, error)
 	GetEventsByIDs(eventIDs []int) ([]models.Event, error)
 	GetEvents(*models.GetEventsOpts) (*models.EventsStruct, error)
+	GetEventTypes() ([]models.EventType, error)
 }
 
 const (
@@ -307,4 +308,38 @@ func (db *DB) countEvents(filters string, args map[string]interface{}) (int, err
 	}
 
 	return total, nil
+}
+
+const (
+	getEventTypes = `
+	SELECT
+		event_type.id,
+		event_type.name
+	FROM
+		event_type
+	`
+)
+
+func (db *DB) GetEventTypes() ([]models.EventType, error) {
+	rows, err := db.Query(getEventTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var eventTypes []models.EventType
+	for rows.Next() {
+		var eventType models.EventType
+		if err := rows.Scan(
+			&eventType.ID,
+			&eventType.Name,
+		); err != nil {
+			return nil, err
+		}
+
+		eventTypes = append(eventTypes, eventType)
+	}
+
+	return eventTypes, nil
 }

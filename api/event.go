@@ -137,3 +137,21 @@ func GetEvent(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Req
 
 	w.WriteJSON(http.StatusOK, event, nil, "")
 }
+
+func GetEventTypes(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	userInfo := models.InfoUser{}
+	mapstructure.Decode(r.Context().Value("user"), &userInfo)
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "Rol Inválido")
+		return
+	}
+
+	eventTypes, err := ctx.DB.GetEventTypes()
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "Error del servidor")
+		return
+	}
+
+	w.WriteJSON(http.StatusOK, eventTypes, nil, "")
+}

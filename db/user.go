@@ -17,6 +17,7 @@ type UserStorage interface {
 	ValidateUserEmailAndDNI(email string, dni string) (emailCounter int, dniCounter int, err error)
 	GetUsers(*models.GetUsersOpts) (*models.UsersStruct, error)
 	UpdateUser(userID int, opts *models.UpdateUserOpts) error
+	GetRoles() ([]models.Role, error)
 }
 
 const (
@@ -688,4 +689,38 @@ func (db *DB) ValidateUserEmailAndDNI(email string, dni string) (emailCounter in
 	}
 
 	return emailCounter, dniCounter, nil
+}
+
+const (
+	getRoles = `
+	SELECT
+		role.id,
+		role.name
+	FROM
+		role
+	`
+)
+
+func (db *DB) GetRoles() ([]models.Role, error) {
+	rows, err := db.Query(getRoles)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var roles []models.Role
+	for rows.Next() {
+		var role models.Role
+		if err := rows.Scan(
+			&role.ID,
+			&role.Name,
+		); err != nil {
+			return nil, err
+		}
+
+		roles = append(roles, role)
+	}
+
+	return roles, nil
 }
