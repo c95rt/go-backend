@@ -44,8 +44,9 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		return
 	}
 
+	userID := userInfo.ID
 	if userInfo.IsClient {
-		opts.UserID = 1
+		userID = 1
 	}
 
 	event, err := ctx.DB.GetEventByID(opts.EventID)
@@ -64,7 +65,7 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		return
 	}
 
-	order, err := ctx.DB.InsertOrder(userInfo.ID, opts.UserID, event.ID, opts.Tickets)
+	order, err := ctx.DB.InsertOrder(userID, opts.UserID, event.ID, opts.Tickets)
 	if err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "Error del servidor")
 		return
