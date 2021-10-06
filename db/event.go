@@ -21,7 +21,7 @@ type EventStorage interface {
 const (
 	insertEvents = `
 	INSERT INTO
-		event (event_type_id, start_date_time, end_date_time, price)
+		event (name, event_type_id, start_date_time, end_date_time, price)
 	VALUES
 		%s
 	`
@@ -29,6 +29,7 @@ const (
 	getEventByID = `
 	SELECT
 		event.id,
+		event.name,
 		event_type.id,
 		event_type.name,
 		event.start_date_time,
@@ -48,6 +49,7 @@ const (
 	getEventsByIDs = `
 	SELECT
 		event.id,
+		event.name,
 		event_type.id,
 		event_type.name,
 		event.start_date_time,
@@ -67,6 +69,7 @@ const (
 	getEvents = `
 	SELECT
 		event.id,
+		event.name,
 		event_type.id,
 		event_type.name,
 		event.start_date_time,
@@ -126,8 +129,8 @@ func (db *DB) insertEventsTx(tx Tx, opts *models.InsertEventsOpts) error {
 
 	for _, eventDate := range opts.Dates {
 		for _, eventDateTime := range eventDate.Times {
-			paramsArr = append(paramsArr, "(?,?,?,?)")
-			argsArr = append(argsArr, opts.TypeID, fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.StartTime), fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.EndTime), eventDateTime.Price)
+			paramsArr = append(paramsArr, "(?, ?,?,?,?)")
+			argsArr = append(argsArr, opts.Name, opts.TypeID, fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.StartTime), fmt.Sprintf("%s %s", eventDate.Date, eventDateTime.EndTime), eventDateTime.Price)
 		}
 	}
 
@@ -165,6 +168,7 @@ func (db *DB) GetEventByID(eventID int) (*models.Event, error) {
 	var eventType models.EventType
 	if err := row.Scan(
 		&event.ID,
+		&event.Name,
 		&eventType.ID,
 		&eventType.Name,
 		&event.StartDateTime,
@@ -212,6 +216,7 @@ func (db *DB) GetEventsByIDs(eventIDs []int) ([]models.Event, error) {
 		var eventType models.EventType
 		if err := rows.Scan(
 			&event.ID,
+			&event.Name,
 			&eventType.ID,
 			&eventType.Name,
 			&event.StartDateTime,
@@ -274,6 +279,7 @@ func (db *DB) GetEvents(opts *models.GetEventsOpts) (*models.EventsStruct, error
 		var eventType models.EventType
 		if err := rows.Scan(
 			&event.ID,
+			&event.Name,
 			&eventType.ID,
 			&eventType.Name,
 			&event.StartDateTime,

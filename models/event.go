@@ -7,6 +7,7 @@ import (
 )
 
 type InsertEventsOpts struct {
+	Name   string                `json:"name"`
 	TypeID int                   `json:"type_id"`
 	Dates  []InsertEventDateOpts `json:"dates"`
 }
@@ -43,6 +44,7 @@ var GetEventsRules = govalidator.MapData{
 
 type Event struct {
 	ID            int        `json:"id,omitempty"`
+	Name          string     `json:"name,omitempty"`
 	Type          *EventType `json:"type,omitempty"`
 	StartDateTime time.Time  `json:"start_date_time"`
 	EndDateTime   time.Time  `json:"end_date_time"`
