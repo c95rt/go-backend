@@ -18,6 +18,7 @@ type Storage interface {
 	EventStorage
 	OrderStorage
 	PaymentStorage
+	CampingStorage
 }
 
 type db interface {

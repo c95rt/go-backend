@@ -67,14 +67,15 @@ func GenerateOrderPDF(order *models.Order) (*bytes.Buffer, error) {
 	}
 
 	if err := r.ParseTemplate("./templates/pdf/order.html", models.OrderPDFHTML{
-		ID:                 order.ID,
-		Firstname:          RemoveAccents(order.Client.Firstname),
-		Lastname:           order.Client.Lastname,
-		EventStartDateTime: order.Event.StartDateTime.String(),
-		EventEndDateTime:   order.Event.EndDateTime.String(),
-		EventType:          order.Event.Type.Name,
-		Price:              order.Event.Price * order.InitialTickets,
-		Image:              base64,
+		ID:            order.ID,
+		Firstname:     RemoveAccents(order.Client.Firstname),
+		Lastname:      order.Client.Lastname,
+		Date:          order.Event.StartDateTime.Format("02-01-2006"),
+		EventType:     order.Event.Type.Name,
+		Price:         order.Price,
+		Image:         base64,
+		TransactionID: order.TransactionID,
+		Tickets:       order.Tickets,
 	}); err != nil {
 		return nil, err
 	}

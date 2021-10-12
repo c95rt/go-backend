@@ -34,6 +34,7 @@ type GetOrdersOpts struct {
 	TransactionID string `schema:"transaction_id"`
 	EventTypeID   int    `schema:"event_type_id"`
 	Paid          *bool  `schema:"paid"`
+	ClientID      int    `schema:"client_id"`
 }
 
 var GetOrdersRules = govalidator.MapData{
@@ -44,6 +45,7 @@ var GetOrdersRules = govalidator.MapData{
 	"transaction_id": []string{"alpha"},
 	"event_type_id":  []string{"numeric"},
 	"paid":           []string{"bool"},
+	"client_id":      []string{"numeric"},
 }
 
 type GetCashierSummaryOpts struct {
@@ -59,29 +61,30 @@ var GetCashierSummaryRules = govalidator.MapData{
 }
 
 type Order struct {
-	ID             int       `json:"id,omitempty"`
-	User           *User     `json:"user,omitempty"`
-	Client         *User     `json:"client,omitempty"`
-	Event          *Event    `json:"event,omitempty"`
-	TransactionID  string    `json:"transaction_id"`
-	Tickets        int       `json:"tickets"`
-	InitialTickets int       `json:"initial_tickets"`
-	Price          int       `json:"price"`
-	Payment        *Payment  `json:"payment,omitempty"`
-	Paid           *bool     `json:"paid,omitempty"`
-	Created        time.Time `json:"created"`
-	Updated        time.Time `json:"updated"`
+	ID            int       `json:"id,omitempty"`
+	User          *User     `json:"user,omitempty"`
+	Client        *User     `json:"client,omitempty"`
+	Event         *Event    `json:"event,omitempty"`
+	TransactionID string    `json:"transaction_id"`
+	Tickets       int       `json:"tickets"`
+	Price         int       `json:"price"`
+	Payment       *Payment  `json:"payment,omitempty"`
+	Paid          *bool     `json:"paid,omitempty"`
+	Used          *bool     `json:"used,omitempty"`
+	Created       time.Time `json:"created"`
+	Updated       time.Time `json:"updated"`
 }
 
 type OrderPDFHTML struct {
-	ID                 int
-	Firstname          string
-	Lastname           string
-	EventStartDateTime string
-	EventEndDateTime   string
-	EventType          string
-	Price              int
-	Image              string
+	ID            int
+	Firstname     string
+	Lastname      string
+	Date          string
+	EventType     string
+	Price         int
+	Image         string
+	TransactionID string
+	Tickets       int
 }
 
 type OrderPDF struct {
@@ -94,6 +97,9 @@ type OrderHTML struct {
 	Lastname      string
 	PaymentMethod string
 	OrderPrice    int
+	TransactionID string
+	Tickets       int
+	Date          string
 }
 
 type GetOrdersStruct struct {

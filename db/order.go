@@ -11,7 +11,7 @@ import (
 )
 
 type OrderStorage interface {
-	InsertOrder(userID int, clientID int, eventID int, tickets int) (*models.Order, error)
+	InsertOrder(userID int, clientID int, eventID int, tickets int, price int) (*models.Order, error)
 	GetOrderByID(orderID int) (*models.Order, error)
 	GetOrderByExternalReference(externalReference string) (*models.Order, error)
 	GetOrderByTransactionID(transactionID string) (*models.Order, error)
@@ -32,7 +32,7 @@ const (
 		transaction_id = :transaction_id,
 		event_id = :event_id,
 		tickets = :tickets,
-		initial_tickets = :initial_tickets
+		price = :price
 	`
 
 	getOrderByTransactionID = `
@@ -40,7 +40,7 @@ const (
 		orders.id,
 		orders.transaction_id,
 		orders.tickets,
-		orders.initial_tickets,
+		orders.price,
 		orders.created,
 		orders.updated,
 		event.id,
@@ -94,11 +94,14 @@ const (
 					) AND
 					payment.active = true
 			), '{}'
-		)
+		),
+		IF(order_use.id IS NULL, false, true)
 	FROM
 		orders
 	INNER JOIN
 		event ON (event.id = orders.event_id AND event.active = true)
+	LEFT JOIN
+		order_use ON (order_use.order_id = orders.id)
 	WHERE
 		orders.active = true AND
 		orders.transaction_id = :transaction_id
@@ -109,7 +112,7 @@ const (
 		orders.id,
 		orders.transaction_id,
 		orders.tickets,
-		orders.initial_tickets,
+		orders.price,
 		orders.created,
 		orders.updated,
 		user.id,
@@ -173,7 +176,8 @@ const (
 					) AND
 					payment.active = true
 			), '{}'
-		)
+		),
+		IF(order_use.id IS NULL, false, true)
 	FROM
 		orders
 	INNER JOIN
@@ -186,6 +190,8 @@ const (
 		user ON (user.id = orders.user_id)
 	INNER JOIN
 		user AS client ON (client.id = orders.client_id)
+	LEFT JOIN
+		order_use ON (order_use.order_id = orders.id)
 	WHERE
 		orders.active = true
 	GROUP BY
@@ -197,7 +203,7 @@ const (
 		orders.id,
 		orders.transaction_id,
 		orders.tickets,
-		orders.initial_tickets,
+		orders.price,
 		orders.created,
 		orders.updated,
 		user.id,
@@ -261,7 +267,8 @@ const (
 					) AND
 					payment.active = true
 			), '{}'
-		)
+		),
+		IF(order_use.id IS NULL, false, true)
 	FROM
 		orders
 	INNER JOIN
@@ -272,6 +279,8 @@ const (
 		event ON (event.id = orders.event_id AND event.active = true)
 	INNER JOIN
 		event_type ON (event_type.id = event.event_type_id)
+	LEFT JOIN
+		order_use ON (order_use.order_id = orders.id)
 	WHERE
 		orders.active = true AND
 		orders.id = :id
@@ -289,24 +298,12 @@ const (
 		tickets > 0;
 	`
 
-	useOrder = `
-	UPDATE
-		orders
-	SET
-		tickets = tickets-1,
-		updated = current_timestamp();
-	WHERE
-		orders.id = :order_id AND
-		orders.tickets > 0 AND
-		orders.active = true;
-	`
-
 	getOrders = `
 	SELECT
 		orders.id,
 		orders.transaction_id,
 		orders.tickets,
-		orders.initial_tickets,
+		orders.price,
 		orders.created,
 		orders.updated,
 		client.id,
@@ -324,7 +321,8 @@ const (
 		event.end_date_time,
 		event.price,
 		event_type.id,
-		event_type.name
+		event_type.name,
+		IF(order_use.id IS NULL, false, true)
 	FROM
 		orders
 	LEFT JOIN
@@ -337,6 +335,8 @@ const (
 		user ON (user.id = orders.user_id)
 	INNER JOIN
 		user AS client ON (orders.client_id = client.id)
+	LEFT JOIN
+		order_use ON (order_use.order_id = orders.id)
 	WHERE
 		orders.active = true
 		#FILTERS#
@@ -366,7 +366,7 @@ const (
 	getSalesSummary = `
 	SELECT
 		orders.created,
-		SUM(COALESCE(payment.amount, event.price*IF(orders.initial_tickets = 0, 1, orders.initial_tickets)))
+		orders.price
 	FROM
 		orders
 	INNER JOIN
@@ -396,7 +396,7 @@ const (
 		user.lastname,
 		user.email,
 		orders.created,
-		SUM(IF(COALESCE((SELECT true FROM payment WHERE payment.order_id = orders.id AND payment.status_id = :status_id ORDER BY payment.id DESC LIMIT 1), false), orders.initial_tickets, 0)),
+		SUM(IF(COALESCE((SELECT true FROM payment WHERE payment.order_id = orders.id AND payment.status_id = :status_id ORDER BY payment.id DESC LIMIT 1), false), orders.tickets, 0)),
 		(
 			SELECT
 				COUNT(order_use.id)
@@ -420,7 +420,7 @@ const (
 	`
 )
 
-func (db *DB) InsertOrder(userID int, clientID int, eventID int, tickets int) (*models.Order, error) {
+func (db *DB) InsertOrder(userID int, clientID int, eventID int, tickets int, price int) (*models.Order, error) {
 	tx, err := db.NewTx()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to start transaction")
@@ -437,7 +437,7 @@ func (db *DB) InsertOrder(userID int, clientID int, eventID int, tickets int) (*
 
 	transactionID := GenerateTicketUUID()
 
-	orderID, newErr := db.insertOrderTx(tx, userID, clientID, eventID, transactionID, tickets)
+	orderID, newErr := db.insertOrderTx(tx, userID, clientID, eventID, transactionID, tickets, price)
 	if newErr != nil {
 		err = newErr
 		return nil, err
@@ -458,19 +458,19 @@ func (db *DB) InsertOrder(userID int, clientID int, eventID int, tickets int) (*
 	return &order, nil
 }
 
-func (db *DB) insertOrderTx(tx Tx, userID int, clientID int, eventID int, transactionID string, tickets int) (int, error) {
+func (db *DB) insertOrderTx(tx Tx, userID int, clientID int, eventID int, transactionID string, tickets int, price int) (int, error) {
 	stmt, err := tx.PrepareNamed(insertOrder)
 	if err != nil {
 		return 0, err
 	}
 
 	args := map[string]interface{}{
-		"event_id":        eventID,
-		"user_id":         userID,
-		"client_id":       clientID,
-		"tickets":         tickets,
-		"initial_tickets": tickets,
-		"transaction_id":  transactionID,
+		"event_id":       eventID,
+		"user_id":        userID,
+		"client_id":      clientID,
+		"tickets":        tickets,
+		"transaction_id": transactionID,
+		"price":          price * tickets,
 	}
 
 	result, err := stmt.Exec(args)
@@ -509,7 +509,7 @@ func (db *DB) GetOrderByExternalReference(externalReference string) (*models.Ord
 		&order.ID,
 		&order.TransactionID,
 		&order.Tickets,
-		&order.InitialTickets,
+		&order.Price,
 		&order.Created,
 		&order.Updated,
 		&user.ID,
@@ -528,6 +528,7 @@ func (db *DB) GetOrderByExternalReference(externalReference string) (*models.Ord
 		&eventType.ID,
 		&eventType.Name,
 		&paymentBT,
+		&order.Used,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -544,7 +545,6 @@ func (db *DB) GetOrderByExternalReference(externalReference string) (*models.Ord
 	order.Client = &client
 	event.Type = &eventType
 	order.Event = &event
-	order.Price = event.Price * order.InitialTickets
 
 	return &order, nil
 }
@@ -569,7 +569,7 @@ func (db *DB) GetOrderByTransactionID(transactionID string) (*models.Order, erro
 		&order.ID,
 		&order.TransactionID,
 		&order.Tickets,
-		&order.InitialTickets,
+		&order.Price,
 		&order.Created,
 		&order.Updated,
 		&event.ID,
@@ -578,6 +578,7 @@ func (db *DB) GetOrderByTransactionID(transactionID string) (*models.Order, erro
 		&event.StartDateTime,
 		&event.EndDateTime,
 		&paymentBT,
+		&order.Used,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -590,7 +591,6 @@ func (db *DB) GetOrderByTransactionID(transactionID string) (*models.Order, erro
 	}
 
 	order.Event = &event
-	order.Price = event.Price * order.InitialTickets
 
 	return &order, nil
 }
@@ -618,7 +618,7 @@ func (db *DB) GetOrderByID(id int) (*models.Order, error) {
 		&order.ID,
 		&order.TransactionID,
 		&order.Tickets,
-		&order.InitialTickets,
+		&order.Price,
 		&order.Created,
 		&order.Updated,
 		&user.ID,
@@ -637,6 +637,7 @@ func (db *DB) GetOrderByID(id int) (*models.Order, error) {
 		&eventType.ID,
 		&eventType.Name,
 		&paymentBT,
+		&order.Used,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -652,7 +653,6 @@ func (db *DB) GetOrderByID(id int) (*models.Order, error) {
 	order.Event = &event
 	order.User = &user
 	order.Client = &client
-	order.Price = event.Price * order.InitialTickets
 
 	return &order, nil
 }
@@ -723,41 +723,9 @@ func (db *DB) UseOrder(orderID int, userID int) error {
 		tx.Commit()
 	}()
 
-	err = db.useOrderTx(tx, orderID)
-	if err != nil {
-		return err
-	}
-
 	err = db.insertOrderUseTx(tx, orderID, userID)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (db *DB) useOrderTx(tx Tx, orderID int) error {
-	stmt, err := tx.PrepareNamed(useOrder)
-	if err != nil {
-		return err
-	}
-
-	args := map[string]interface{}{
-		"order_id": orderID,
-	}
-
-	result, err := stmt.Exec(args)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if int(rowsAffected) != 1 {
-		return errors.Errorf("expected %d and deleted %d", 1, rowsAffected)
 	}
 
 	return nil
@@ -794,11 +762,15 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 		args["event_to"] = opts.EventFrom
 	}
 	if opts.TransactionID != "" {
-		filters += " AND orders.transaction_id <= :transaction_id "
+		filters += " AND orders.transaction_id = :transaction_id "
 		args["transaction_id"] = opts.TransactionID
 	}
 	if opts.EventTypeID != 0 {
 		filters += " AND event.event_type_id = :event_type_id "
+	}
+	if opts.ClientID != 0 {
+		filters += " AND orders.client_id = :client_id "
+		args["client_id"] = opts.ClientID
 	}
 	if opts.Paid != nil {
 		filters += " AND COALESCE((SELECT true FROM payment WHERE payment.order_id = orders.id AND payment.status_id = :status_id ORDER BY payment.id DESC LIMIT 1), false) = :paid"
@@ -845,7 +817,7 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 			&order.ID,
 			&order.TransactionID,
 			&order.Tickets,
-			&order.InitialTickets,
+			&order.Price,
 			&order.Created,
 			&order.Updated,
 			&client.ID,
@@ -864,6 +836,7 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 			&event.Price,
 			&eventType.ID,
 			&eventType.Name,
+			&order.Used,
 		); err != nil {
 			return nil, err
 		}
@@ -871,7 +844,6 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 		order.Client = &client
 		order.User = &user
 		order.Event = &event
-		order.Price = event.Price * order.InitialTickets
 
 		orders.Orders = append(orders.Orders, order)
 	}

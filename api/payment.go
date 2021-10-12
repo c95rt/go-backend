@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"time"
 
 	"bitbucket.org/parqueoasis/backend/config"
 	"bitbucket.org/parqueoasis/backend/db"
@@ -67,8 +68,6 @@ func InsertPaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 			}
 		}
 	}
-
-	order.Price = order.InitialTickets * order.Event.Price
 
 	response, err := ctx.MercadoPago.MPCreatePreference(order, ctx.Config.BackendBaseURL)
 	if err != nil {
@@ -163,8 +162,6 @@ func UpdatePaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 			return
 		}
 
-		order.Price = order.InitialTickets * order.Event.Price
-
 		pdfBuffer, err := helpers.GenerateOrderPDF(order)
 		if err != nil {
 			w.LogError(err, "failed generating PDF")
@@ -189,6 +186,9 @@ func UpdatePaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 			Lastname:      order.Client.Lastname,
 			PaymentMethod: db.ConstPaymentMethods.MercadoPago.Name,
 			OrderPrice:    order.Price,
+			TransactionID: order.TransactionID,
+			Tickets:       order.Tickets,
+			Date:          time.Now().Format("02-01-2016"),
 		})
 		if err != nil {
 			w.LogError(err, "failed sending email")
@@ -242,8 +242,6 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 		}
 	}
 
-	order.Price = order.InitialTickets * order.Event.Price
-
 	newOpts := db.InsertPaymentOpts{
 		MethodID:     db.ConstPaymentMethods.MercadoPago.ID,
 		Amount:       order.Price,
@@ -290,6 +288,9 @@ func InsertPaymentCashier(ctx *config.AppContext, w *middlewares.ResponseWriter,
 			Lastname:      order.Client.Lastname,
 			PaymentMethod: db.ConstPaymentMethods.Cashier.Name,
 			OrderPrice:    order.Price,
+			TransactionID: order.TransactionID,
+			Tickets:       order.Tickets,
+			Date:          time.Now().Format("02-01-2016"),
 		})
 		if err != nil {
 			w.LogError(err, "failed sending email")

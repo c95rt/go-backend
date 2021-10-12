@@ -50,5 +50,9 @@ func GetRoutes() []*server.Route {
 		{Path: "/payment/{order_id:[0-9]+}/mercadopago", Methods: []string{"POST", "HEAD"}, Handler: InsertPaymentMercadoPago, IsProtected: true},
 		{Path: "/payment/{order_id:[0-9]+}/cashier", Methods: []string{"POST", "HEAD"}, Handler: InsertPaymentCashier, IsProtected: true},
 		{Path: "/payment/mercadopago", Methods: []string{"POST", "HEAD"}, Handler: UpdatePaymentMercadoPago, IsProtected: false},
+
+		// Camping
+		{Path: "/camping", Methods: []string{"POST", "HEAD"}, Handler: InsertCamping, IsProtected: true},
+		{Path: "/camping", Methods: []string{"GET", "HEAD"}, Handler: GetCampings, IsProtected: true},
 	}
 }

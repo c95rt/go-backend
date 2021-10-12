@@ -65,7 +65,7 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		return
 	}
 
-	order, err := ctx.DB.InsertOrder(userID, opts.UserID, event.ID, opts.Tickets)
+	order, err := ctx.DB.InsertOrder(userID, opts.UserID, event.ID, opts.Tickets, event.Price)
 	if err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "Error del servidor")
 		return
@@ -137,9 +137,11 @@ func GetOrderPDF(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		return
 	}
 
-	if !(order.Tickets > 0) {
-		w.WriteJSON(http.StatusBadRequest, nil, nil, "A la orden no le quedan tickets")
-		return
+	if order != nil {
+		if *order.Used == true {
+			w.WriteJSON(http.StatusBadRequest, nil, nil, "La orden ya está caducada")
+			return
+		}
 	}
 
 	if userInfo.IsClient {
@@ -194,11 +196,6 @@ func UseOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !(order.Tickets > 0) {
-		w.WriteJSON(http.StatusNotFound, nil, nil, "A la orden no le quedan tickets")
-		return
-	}
-
 	if order.Payment == nil {
 		w.WriteJSON(http.StatusBadRequest, nil, nil, "La orden no ha sido pagada")
 		return
@@ -227,6 +224,13 @@ func UseOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Req
 	if !time.Now().Before(order.Event.EndDateTime) {
 		w.WriteJSON(http.StatusBadRequest, nil, nil, "El evento ya ha terminado")
 		return
+	}
+
+	if order != nil {
+		if *order.Used == true {
+			w.WriteJSON(http.StatusBadRequest, nil, nil, "La orden ya está caducada")
+			return
+		}
 	}
 
 	if err := ctx.DB.UseOrder(order.ID, userInfo.ID); err != nil {
@@ -277,9 +281,11 @@ func UpdateOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		return
 	}
 
-	if !(order.Tickets > 0) {
-		w.WriteJSON(http.StatusNotFound, nil, err, "A la orden no le quedan tickets")
-		return
+	if order != nil {
+		if *order.Used == true {
+			w.WriteJSON(http.StatusBadRequest, nil, nil, "La orden ya está caducada")
+			return
+		}
 	}
 
 	if err := ctx.DB.UpdateOrder(orderID, opts.EventID); err != nil {
