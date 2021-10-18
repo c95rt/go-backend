@@ -216,12 +216,12 @@ func UseOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !time.Now().After(order.Event.StartDateTime) && !time.Now().Equal(order.Event.StartDateTime) {
+	if !time.Now().After(order.Event.StartDateTime.Add(-4*time.Hour)) && !time.Now().Equal(order.Event.StartDateTime) {
 		w.WriteJSON(http.StatusBadRequest, nil, nil, "El evento no ha empezado")
 		return
 	}
 
-	if !time.Now().Before(order.Event.EndDateTime) {
+	if !time.Now().Before(order.Event.EndDateTime.Add(4 * time.Hour)) {
 		w.WriteJSON(http.StatusBadRequest, nil, nil, "El evento ya ha terminado")
 		return
 	}
