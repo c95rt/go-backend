@@ -42,7 +42,7 @@ var GetOrdersRules = govalidator.MapData{
 	"event_to":       []string{"date_ISO8601"},
 	"limit_from":     []string{"numeric"},
 	"limit_to":       []string{"numeric"},
-	"transaction_id": []string{"alpha"},
+	"transaction_id": []string{},
 	"event_type_id":  []string{"numeric"},
 	"paid":           []string{"bool"},
 	"client_id":      []string{"numeric"},
