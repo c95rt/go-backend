@@ -1,0 +1,8 @@
+- name: Build and deploy [Development]
+  uses: matheusvanzan/sshpass-action@v2
+  with:
+    host: 54.244.140.20
+    user: root
+    pass: latadigital
+    run: |
+      ./test.sh
