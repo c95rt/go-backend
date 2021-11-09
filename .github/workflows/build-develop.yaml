@@ -14,4 +14,5 @@ jobs:
         password: latadigital
         script: |
           whoami
+          ls
           /home/ec2-user/test.sh
