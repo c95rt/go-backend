@@ -15,4 +15,4 @@ jobs:
         script: |
           whoami
           ls -al
-          ./test.sh
+          ~/test.sh
