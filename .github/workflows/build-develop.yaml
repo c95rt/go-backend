@@ -12,7 +12,7 @@ jobs:
         host: 54.244.140.20
         username: root
         password: latadigital
-        port: 22
         script: |
+          whoami
           ls -al
           ./test.sh
