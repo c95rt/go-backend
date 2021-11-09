@@ -14,5 +14,4 @@ jobs:
         password: latadigital
         script: |
           whoami
-          ls
           /home/ec2-user/parqueoasis-api.sh
