@@ -9,7 +9,7 @@ jobs:
     - name: executing remote ssh commands using password
       uses: appleboy/ssh-action@master
       with:
-        host: 54.244.140.20
+        host: 54.244.140.206
         username: root
         password: latadigital
         script: |
