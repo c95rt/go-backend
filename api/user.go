@@ -139,7 +139,7 @@ func UpdateUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.R
 		return
 	}
 
-	if !(userInfo.IsAdmin && userInfo.IsCashier) && userInfo.ID != userID {
+	if !userInfo.IsAdmin && !userInfo.IsCashier && userInfo.ID != userID {
 		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
 		return
 	}
@@ -182,10 +182,12 @@ func UpdateUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.R
 			}
 		}
 
-		if user.Additional.DNI != opts.DNI {
-			if dniCounter > 0 {
-				w.WriteJSON(http.StatusBadRequest, nil, nil, "dni exists")
-				return
+		if opts.DNI != "" {
+			if user.Additional.DNI != opts.DNI {
+				if dniCounter > 0 {
+					w.WriteJSON(http.StatusBadRequest, nil, nil, "dni exists")
+					return
+				}
 			}
 		}
 	}
