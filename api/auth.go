@@ -144,6 +144,7 @@ func SendRememberToken(ctx *config.AppContext, w *middlewares.ResponseWriter, r 
 			NameFrom:     ctx.Config.Mail.NameFrom,
 			Subject:      ctx.Config.Mail.PasswordRecover.Subject,
 			TemplatePath: fmt.Sprintf("%s%s/%s", ctx.Config.Mail.Folder, ctx.Config.Mail.Path, ctx.Config.Mail.PasswordRecover.Template),
+			AwsSMTP:      ctx.AwsSMTP,
 		}
 
 		err = ed.SendEmail(models.PasswordRecoverHTML{

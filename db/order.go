@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"bitbucket.org/parqueoasis/backend/models"
@@ -775,7 +774,6 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 	if opts.Paid != nil {
 		filters += " AND COALESCE((SELECT true FROM payment WHERE payment.order_id = orders.id AND payment.status_id = :status_id ORDER BY payment.id DESC LIMIT 1), false) = :paid"
 		args["paid"] = opts.Paid
-		fmt.Println(filters)
 	}
 	if opts.LimitTo == 0 {
 		opts.LimitTo = 10
