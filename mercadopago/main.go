@@ -30,9 +30,15 @@ var MPActions interface {
 }
 
 type MPCreatePreferenceRequest struct {
-	NotificationURL   string             `json:"notification_url"`
-	ExternalReference string             `json:"external_reference"`
-	Items             []MPPreferenceItem `json:"items"`
+	NotificationURL   string               `json:"notification_url"`
+	ExternalReference string               `json:"external_reference"`
+	Items             []MPPreferenceItem   `json:"items"`
+	BackUrls          MPPreferenceBackUrls `json:"back_urls"`
+}
+
+type MPPreferenceBackUrls struct {
+	Success string `json:"success"`
+	Failure string `json:"faillure"`
 }
 
 type MPPreferenceItem struct {
@@ -57,6 +63,10 @@ func (mp *MP) MPCreatePreference(order *models.Order, baseURL string) (*MPCreate
 	requestBody := MPCreatePreferenceRequest{
 		NotificationURL:   fmt.Sprintf("%s%s", baseURL, mp.NotificationPath),
 		ExternalReference: shortuuid.New(),
+		BackUrls: MPPreferenceBackUrls{
+			Success: "https://dev.parqueasis.cl/checkout/success",
+			Failure: "https://dev.parqueoasis.cl/checkout/failure",
+		},
 	}
 
 	item := MPPreferenceItem{
