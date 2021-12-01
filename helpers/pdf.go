@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"image"
 	"image/png"
-	"log"
 	"strings"
 	"text/template"
 
@@ -44,15 +43,14 @@ func (r *RequestPdf) GeneratePDF() (*bytes.Buffer, error) {
 	funcName := "GeneratePDF"
 	pdfg, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		log.Fatal(errors.Wrap(err, funcName))
-		return nil, errors.Wrap(err, funcName)
+		return nil, errors.Wrap(errors.Wrap(err, "wkhtmltopdf.NewPDFGenerator"), funcName)
 	}
 
 	pdfg.AddPage(wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(strings.Join(r.bodies, ConstHTMLNewPage)))))
 
 	err = pdfg.Create()
 	if err != nil {
-		return nil, errors.Wrap(err, funcName)
+		return nil, errors.Wrap(errors.Wrap(err, "pdfg.Create"), funcName)
 	}
 
 	return pdfg.Buffer(), nil
