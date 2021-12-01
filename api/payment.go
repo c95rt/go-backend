@@ -28,11 +28,6 @@ func InsertPaymentMercadoPago(ctx *config.AppContext, w *middlewares.ResponseWri
 	userInfo := models.InfoUser{}
 	mapstructure.Decode(r.Context().Value("user"), &userInfo)
 
-	if !userInfo.IsClient {
-		w.WriteJSON(http.StatusInternalServerError, nil, nil, "invalid roles")
-		return
-	}
-
 	vars := mux.Vars(r)
 	orderID, err := strconv.Atoi(vars["order_id"])
 	if err != nil {
