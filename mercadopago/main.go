@@ -64,7 +64,7 @@ func (mp *MP) MPCreatePreference(order *models.Order, baseURL string) (*MPCreate
 		NotificationURL:   fmt.Sprintf("%s%s", baseURL, mp.NotificationPath),
 		ExternalReference: shortuuid.New(),
 		BackUrls: MPPreferenceBackUrls{
-			Success: "https://dev.parqueasis.cl/checkout/success",
+			Success: "https://dev.parqueoasis.cl/checkout/success",
 			Failure: "https://dev.parqueoasis.cl/checkout/failure",
 		},
 	}

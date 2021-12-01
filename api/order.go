@@ -60,7 +60,7 @@ func InsertOrder(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.
 		return
 	}
 
-	if event.EndDateTime.Before(time.Now()) {
+	if event.EndDateTime.Before(time.Now().Add(-6 * time.Hour)) {
 		w.WriteJSON(http.StatusBadRequest, nil, nil, "El evento ya ha terminado")
 		return
 	}
