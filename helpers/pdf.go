@@ -49,6 +49,7 @@ func (r *RequestPdf) GeneratePDF() (*bytes.Buffer, error) {
 	pdfg.Cover.EnableLocalFileAccess.Set(true)
 
 	pdfg.AddPage(wkhtmltopdf.NewPageReader(bytes.NewReader([]byte(strings.Join(r.bodies, ConstHTMLNewPage)))))
+	pdfg.Cover.EnableLocalFileAccess.Set(true)
 
 	err = pdfg.Create()
 	if err != nil {
