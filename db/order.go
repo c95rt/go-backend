@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"bitbucket.org/parqueoasis/backend/models"
@@ -411,8 +412,8 @@ const (
 	INNER JOIN
 		user ON (user.id = orders.user_id)
 	WHERE
-		orders.created BETWEEN :date_from AND :date_to AND
-		orders.user_id = :cashier_id
+		orders.created BETWEEN :date_from AND :date_to
+		%s
 	GROUP BY
 		YEAR(orders.created),
 		MONTH(orders.created)
@@ -891,16 +892,23 @@ func (db *DB) GetSalesSummary() ([]models.DailySales, error) {
 }
 
 func (db *DB) GetCashierSummary(cashierID int, dateFrom string, dateTo string) ([]models.CashierMonthlySales, error) {
-	stmt, err := db.PrepareNamed(getCashierSummary)
-	if err != nil {
-		return nil, err
-	}
-
 	args := map[string]interface{}{
 		"cashier_id": cashierID,
 		"date_from":  dateFrom,
 		"date_to":    dateTo,
 		"status_id":  ConstPaymentStatuses.Approved.ID,
+	}
+
+	var filters string
+	if cashierID != 0 {
+		filters += " AND orders.user_id = :cashier_id "
+		args["cashier_id"] = cashierID
+	}
+	query := fmt.Sprintf(getCashierSummary, filters)
+
+	stmt, err := db.PrepareNamed(query)
+	if err != nil {
+		return nil, err
 	}
 
 	rows, err := stmt.Query(args)

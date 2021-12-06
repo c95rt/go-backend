@@ -57,7 +57,7 @@ type GetCashierSummaryOpts struct {
 var GetCashierSummaryRules = govalidator.MapData{
 	"date_from":  []string{"date_ISO8601", "required"},
 	"date_to":    []string{"date_ISO8601", "required"},
-	"cashier_id": []string{"numeric", "required"},
+	"cashier_id": []string{"numeric"},
 }
 
 type Order struct {
