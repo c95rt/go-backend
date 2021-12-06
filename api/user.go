@@ -227,7 +227,7 @@ func GetUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !(userInfo.IsAdmin && userInfo.IsCashier) && userInfo.ID != userID {
+	if !(userInfo.IsAdmin || userInfo.IsCashier) && userInfo.ID != userID {
 		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
 		return
 	}

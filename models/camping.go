@@ -31,7 +31,7 @@ var GetCampingsRules = govalidator.MapData{
 	"limit_from":     []string{"numeric"},
 	"limit_to":       []string{"numeric"},
 	"client_id":      []string{"numeric"},
-	"transaction_id": []string{"alpha"},
+	"transaction_id": []string{},
 }
 
 type Camping struct {
