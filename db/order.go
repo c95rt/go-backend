@@ -755,10 +755,12 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 	var filters string
 	args := make(map[string]interface{})
 	if opts.EventFrom != "" {
+		opts.EventFrom += " 00:00:00"
 		filters += " AND event.start_date_time >= :event_from "
 		args["event_from"] = opts.EventFrom
 	}
 	if opts.EventTo != "" {
+		opts.EventTo += " 23:59:59"
 		filters += " AND event.start_date_time <= :event_to "
 		args["event_to"] = opts.EventTo
 	}
