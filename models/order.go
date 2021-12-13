@@ -47,6 +47,7 @@ var GetOrdersRules = govalidator.MapData{
 	"event_type_id":  []string{"numeric"},
 	"paid":           []string{"bool"},
 	"client_id":      []string{"numeric"},
+	"user_id":        []string{"numeric"},
 }
 
 type GetCashierSummaryOpts struct {
