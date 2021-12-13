@@ -35,6 +35,7 @@ type GetOrdersOpts struct {
 	EventTypeID   int    `schema:"event_type_id"`
 	Paid          *bool  `schema:"paid"`
 	ClientID      int    `schema:"client_id"`
+	UserID        int    `schema:"user_id"`
 }
 
 var GetOrdersRules = govalidator.MapData{
@@ -49,15 +50,15 @@ var GetOrdersRules = govalidator.MapData{
 }
 
 type GetCashierSummaryOpts struct {
-	DateFrom  string `schema:"date_from"`
-	DateTo    string `schema:"date_to"`
-	CashierID int    `schema:"cashier_id"`
+	DateFrom   string `schema:"date_from"`
+	DateTo     string `schema:"date_to"`
+	CashierIDs []int  `schema:"cashier_ids"`
 }
 
 var GetCashierSummaryRules = govalidator.MapData{
-	"date_from":  []string{"date_ISO8601", "required"},
-	"date_to":    []string{"date_ISO8601", "required"},
-	"cashier_id": []string{"numeric"},
+	"date_from":   []string{"date_ISO8601", "required"},
+	"date_to":     []string{"date_ISO8601", "required"},
+	"cashier_ids": []string{"array_int"},
 }
 
 type Order struct {

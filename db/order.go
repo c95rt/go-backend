@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"bitbucket.org/parqueoasis/backend/models"
+	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +20,7 @@ type OrderStorage interface {
 	UseOrder(orderID int, userID int) error
 	GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, error)
 	GetSalesSummary() ([]models.DailySales, error)
-	GetCashierSummary(cashierID int, dateFrom string, dateTo string) ([]models.CashierMonthlySales, error)
+	GetCashierSummary(cashierIDs []int, dateFrom string, dateTo string) ([]models.CashierMonthlySales, error)
 }
 
 const (
@@ -772,6 +773,10 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 		filters += " AND orders.client_id = :client_id "
 		args["client_id"] = opts.ClientID
 	}
+	if opts.UserID != 0 {
+		filters += " AND orders.user_id = :user_id "
+		args["user_id"] = opts.UserID
+	}
 	if opts.Paid != nil {
 		filters += " AND COALESCE((SELECT true FROM payment WHERE payment.order_id = orders.id AND payment.status_id = :status_id ORDER BY payment.id DESC LIMIT 1), false) = :paid"
 		args["paid"] = opts.Paid
@@ -891,27 +896,35 @@ func (db *DB) GetSalesSummary() ([]models.DailySales, error) {
 	return dailySalesArray, nil
 }
 
-func (db *DB) GetCashierSummary(cashierID int, dateFrom string, dateTo string) ([]models.CashierMonthlySales, error) {
+func (db *DB) GetCashierSummary(cashierIDs []int, dateFrom string, dateTo string) ([]models.CashierMonthlySales, error) {
 	args := map[string]interface{}{
-		"cashier_id": cashierID,
+		"cashier_id": cashierIDs,
 		"date_from":  dateFrom,
 		"date_to":    dateTo,
 		"status_id":  ConstPaymentStatuses.Approved.ID,
 	}
 
 	var filters string
-	if cashierID != 0 {
-		filters += " AND orders.user_id = :cashier_id "
-		args["cashier_id"] = cashierID
+	if len(cashierIDs) != 0 {
+		filters += " AND orders.user_id IN (:cashier_id) "
+		args["cashier_id"] = cashierIDs
 	}
+
 	query := fmt.Sprintf(getCashierSummary, filters)
 
-	stmt, err := db.PrepareNamed(query)
+	finalQuery, nargs, err := sqlx.Named(query, args)
 	if err != nil {
 		return nil, err
 	}
 
-	rows, err := stmt.Query(args)
+	finalQuery, nargs, err = sqlx.In(finalQuery, nargs...)
+	if err != nil {
+		return nil, err
+	}
+
+	finalQuery = db.Rebind(finalQuery)
+
+	rows, err := db.Query(finalQuery, nargs...)
 	if err != nil {
 		return nil, err
 	}

@@ -381,11 +381,7 @@ func GetCashierSummary(ctx *config.AppContext, w *middlewares.ResponseWriter, r 
 	decoder := schema.NewDecoder()
 	decoder.Decode(&opts, r.URL.Query())
 
-	if !userInfo.IsAdmin {
-		opts.CashierID = userInfo.ID
-	}
-
-	monthlySales, err := ctx.DB.GetCashierSummary(opts.CashierID, opts.DateFrom, opts.DateTo)
+	monthlySales, err := ctx.DB.GetCashierSummary(opts.CashierIDs, opts.DateFrom, opts.DateTo)
 	if err != nil {
 		w.WriteJSON(http.StatusInternalServerError, nil, err, "Error del servidor")
 		return
