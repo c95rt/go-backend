@@ -760,7 +760,7 @@ func (db *DB) GetOrders(opts *models.GetOrdersOpts) (*models.GetOrdersStruct, er
 	}
 	if opts.EventTo != "" {
 		filters += " AND event.start_date_time <= :event_to "
-		args["event_to"] = opts.EventFrom
+		args["event_to"] = opts.EventTo
 	}
 	if opts.TransactionID != "" {
 		filters += " AND orders.transaction_id = :transaction_id "
