@@ -1,4 +1,4 @@
-FROM golang:1.14.4-alpine3.12 as builder
+FROM golang:1.17-alpine as builder
 LABEL maintainer="César Reyes <cesar95rt@gmail.com>"
 WORKDIR /build
 
@@ -9,16 +9,24 @@ ENV GO111MODULE=on
 
 RUN apk update && apk upgrade && \
   apk add --no-cache bash git openssh
-RUN apk add -U --no-cache ca-certificates
+RUN apk add -U --no-cache gcc g++ libc-dev ca-certificates
 
-COPY ./backend .
+COPY ./parqueoasis-backend .
 
 RUN go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o /go/bin/backend
 
-FROM ubuntu
+FROM surnet/alpine-wkhtmltopdf:3.12-0.12.6-small as wkhtmltopdf
+FROM alpine AS projectservice
+
+RUN apk add --no-cache libstdc++ libx11 libxrender libxext libssl1.1 fontconfig freetype ttf-dejavu ttf-droid ttf-freefont ttf-liberation && apk add --no-cache --virtual .build-deps msttcorefonts-installer && update-ms-fonts && fc-cache -f && rm -rf /tmp/* && apk del .build-deps
+RUN apk add ca-certificates
+COPY --from=wkhtmltopdf /bin/wkhtmltopdf /bin/wkhtmltopdf
+#FROM ubuntu
 COPY --from=builder /go/bin/backend /backend
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/local/go/lib/time/zoneinfo.zip /
+COPY --from=builder /build/templates /templates
+COPY --from=builder /build/wkhtmltopdf /usr/bin
 ENV ZONEINFO=/zoneinfo.zip
 
 CMD ["/backend", "backend-up"]

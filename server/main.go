@@ -110,6 +110,25 @@ func (wrapper *ContextWrapper) CreateSMTPConnection() {
 	wrapper.Context.AwsSMTP = conn
 }
 
+func (wrapper *ContextWrapper) CreateMercadoPagoIntegration() {
+	mp := config.CreateMercadoPagoIntegration(wrapper.Context.Config.MercadoPago)
+	if mp == nil {
+		log.Fatal(errors.Errorf("failed to create mercadopago integration"))
+	}
+	wrapper.Context.MercadoPago = mp
+}
+
+func (wrapper *ContextWrapper) CreateNewSessionS3() {
+	session, err := config.CreateNewSessionS3(wrapper.Context.Config.AwsS3)
+	if err != nil {
+		log.Fatal(errors.Errorf("failed to create new session s3 - %s", err.Error()))
+	}
+	if session == nil {
+		log.Fatal(errors.Errorf("nil session s3"))
+	}
+	wrapper.Context.AwsS3 = session
+}
+
 func UpServer(routes []*Route, wrapper *ContextWrapper) {
 	server, err := createServer(wrapper.Context, routes)
 	if err != nil {

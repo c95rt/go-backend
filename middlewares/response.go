@@ -11,7 +11,9 @@ import (
 )
 
 type ResponseWriter struct {
-	Writer http.ResponseWriter
+	Writer   http.ResponseWriter
+	Logger   *log.Entry
+	Language string
 }
 
 func NewResponseWriter(w http.ResponseWriter) *ResponseWriter {
@@ -77,6 +79,39 @@ func (r *ResponseWriter) writePlainJSONResponse(statusCode int, data interface{}
 	}
 }
 
+func (r *ResponseWriter) StartLogger(handlerName string) {
+	logger := config.GetLogger()
+	logger = logger.WithFields(log.Fields{
+		"handler": handlerName,
+	})
+
+	r.Logger = logger
+}
+
+func (r *ResponseWriter) LogInfo(data interface{}, message string) {
+	if r.Logger == nil {
+		return
+	}
+
+	r.Logger.WithFields(log.Fields{
+		"data": data,
+	}).Info(message)
+}
+
+func (r *ResponseWriter) LogError(err error, message string) {
+	if r.Logger == nil {
+		return
+	}
+
+	if err == nil {
+		err = errors.New(message)
+	}
+
+	r.Logger.WithFields(log.Fields{
+		"error": err.Error(),
+	}).Error(message)
+}
+
 func (r *ResponseWriter) WriteJSON(statusCode int, data interface{}, err error, message string) {
 	logger := config.GetLogger()
 	fields := make(log.Fields)
@@ -92,6 +127,29 @@ func (r *ResponseWriter) WriteJSON(statusCode int, data interface{}, err error, 
 		}
 		if err == nil {
 			err = errors.Errorf(message)
+		}
+		fields["errors"] = data
+		logger.WithFields(fields).Error(err)
+	}
+	r.writePlainJSONResponse(statusCode, data)
+}
+
+func (r *ResponseWriter) Write(statusCode int, data interface{}, err error, message *NewRM) {
+	finalMessage := *message
+	logger := config.GetLogger()
+	fields := make(log.Fields)
+	fields["status_code"] = statusCode
+	if statusCode >= 200 && statusCode <= 299 {
+		logger.WithFields(fields).Info("success")
+	}
+	if statusCode >= 300 {
+		if data == nil {
+			data = map[string]interface{}{
+				"error": finalMessage[r.Language],
+			}
+		}
+		if err == nil {
+			err = errors.Errorf(finalMessage[r.Language])
 		}
 		fields["errors"] = data
 		logger.WithFields(fields).Error(err)
@@ -139,4 +197,11 @@ func (r *ResponseWriter) Error(code int, msg string, opts ...ErrOption) {
 		With(err)
 	}
 	r.writeJSONResponse(code, []*errorResponse{err}, nil)
+}
+
+func (r *ResponseWriter) GetRequestLanguage(request *http.Request) {
+	r.Language = Language.Spanish
+	if language, ok := LanguageMap[request.Header.Get("Accept-Language")]; ok {
+		r.Language = language
+	}
 }

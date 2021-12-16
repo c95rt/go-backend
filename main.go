@@ -60,6 +60,8 @@ func StartServer(routes []*server.Route) {
 	ctx := server.GetAppContext()
 	ctx.CreateMySQLConnection()
 	ctx.CreateSMTPConnection()
+	ctx.CreateMercadoPagoIntegration()
+	ctx.CreateNewSessionS3()
 
 	server.UpServer(routes, ctx)
 }

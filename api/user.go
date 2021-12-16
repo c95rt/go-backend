@@ -139,7 +139,7 @@ func UpdateUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.R
 		return
 	}
 
-	if !(userInfo.IsAdmin && userInfo.IsCashier) && userInfo.ID != userID {
+	if !userInfo.IsAdmin && !userInfo.IsCashier && userInfo.ID != userID {
 		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
 		return
 	}
@@ -182,10 +182,12 @@ func UpdateUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.R
 			}
 		}
 
-		if user.Additional.DNI != opts.DNI {
-			if dniCounter > 0 {
-				w.WriteJSON(http.StatusBadRequest, nil, nil, "dni exists")
-				return
+		if opts.DNI != "" {
+			if user.Additional.DNI != opts.DNI {
+				if dniCounter > 0 {
+					w.WriteJSON(http.StatusBadRequest, nil, nil, "dni exists")
+					return
+				}
 			}
 		}
 	}
@@ -225,7 +227,7 @@ func GetUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !(userInfo.IsAdmin && userInfo.IsCashier) && userInfo.ID != userID {
+	if !(userInfo.IsAdmin || userInfo.IsCashier) && userInfo.ID != userID {
 		w.WriteJSON(http.StatusForbidden, nil, nil, "invalid roles")
 		return
 	}
@@ -240,10 +242,10 @@ func GetUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Requ
 }
 
 func InsertUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
-	var opts models.UpdateUserOpts
+	var opts models.InsertUserOpts
 	validatorOpts := govalidator.Options{
 		Request: r,
-		Rules:   models.UpdateUserRules,
+		Rules:   models.InsertUserRules,
 		Data:    &opts,
 	}
 	v := govalidator.New(validatorOpts)
@@ -293,4 +295,22 @@ func InsertUser(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.R
 	}
 
 	w.WriteJSON(http.StatusNoContent, nil, nil, "")
+}
+
+func GetRoles(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	userInfo := models.InfoUser{}
+	mapstructure.Decode(r.Context().Value("user"), &userInfo)
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "Rol Inválido")
+		return
+	}
+
+	roles, err := ctx.DB.GetRoles()
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "Error del servidor")
+		return
+	}
+
+	w.WriteJSON(http.StatusOK, roles, nil, "")
 }

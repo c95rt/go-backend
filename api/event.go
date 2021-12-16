@@ -3,29 +3,34 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"bitbucket.org/parqueoasis/backend/config"
 	"bitbucket.org/parqueoasis/backend/db"
 	"bitbucket.org/parqueoasis/backend/middlewares"
 	"bitbucket.org/parqueoasis/backend/models"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"github.com/mitchellh/mapstructure"
 	"github.com/thedevsaddam/govalidator"
 )
 
 func InsertEvents(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	w.GetRequestLanguage(r)
+
 	userInfo := models.InfoUser{}
 	mapstructure.Decode(r.Context().Value("user"), &userInfo)
 
 	if !userInfo.IsCashier && !userInfo.IsAdmin {
-		w.WriteJSON(http.StatusForbidden, nil, nil, "must be admin")
+		w.Write(http.StatusForbidden, nil, nil, middlewares.Responses.InvalidRoles)
 		return
 	}
 
 	timeLocation, err := time.LoadLocation("America/Santiago")
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed loading time location")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
+		return
 	}
 
 	var opts models.InsertEventsOpts
@@ -37,45 +42,45 @@ func InsertEvents(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http
 	v := govalidator.New(validatorOpts)
 	errs := v.ValidateJSON()
 	if len(errs) > 0 {
-		w.WriteJSON(http.StatusBadRequest, errs, nil, "failed validations")
+		w.Write(http.StatusBadRequest, errs, nil, middlewares.Responses.FailedValidations)
 		return
 	}
 
 	for _, date := range opts.Dates {
 		if _, err := time.Parse(db.ConstLayoutDate, date.Date); err != nil {
-			w.WriteJSON(http.StatusBadRequest, nil, err, fmt.Sprintf("date must be like %s", db.ConstLayoutDate))
+			w.Write(http.StatusBadRequest, nil, err, middlewares.Responses.FailedValidations)
 			return
 		}
 
 		if len(date.Times) == 0 {
-			w.WriteJSON(http.StatusBadRequest, nil, nil, "the times field is required")
+			w.Write(http.StatusBadRequest, nil, nil, middlewares.Responses.TimeFieldRequired)
 			return
 		}
 
 		for _, eventTime := range date.Times {
 			startDateTime, err := time.ParseInLocation(db.ConstLayoutDateTime, fmt.Sprintf("%s %s", date.Date, eventTime.StartTime), timeLocation)
 			if err != nil {
-				w.WriteJSON(http.StatusBadRequest, nil, err, fmt.Sprintf("end_time must be like %s", db.ConstLayoutTime))
+				w.Write(http.StatusBadRequest, nil, err, middlewares.Responses.FailedValidations)
 				return
 			}
 			endDateTime, err := time.ParseInLocation(db.ConstLayoutDateTime, fmt.Sprintf("%s %s", date.Date, eventTime.EndTime), timeLocation)
 			if err != nil {
-				w.WriteJSON(http.StatusBadRequest, nil, err, fmt.Sprintf("end_time must be like %s", db.ConstLayoutTime))
+				w.Write(http.StatusBadRequest, nil, err, middlewares.Responses.FailedValidations)
 				return
 			}
 			if endDateTime.Before(startDateTime) {
-				w.WriteJSON(http.StatusBadRequest, nil, nil, fmt.Sprintf("end of event must be after start"))
+				w.Write(http.StatusBadRequest, nil, nil, middlewares.Responses.EndTimeBeforeStartTime)
 				return
 			}
 			if endDateTime.Before(time.Now()) {
-				w.WriteJSON(http.StatusBadRequest, nil, nil, fmt.Sprintf("end of event must be after now"))
+				w.Write(http.StatusBadRequest, nil, nil, middlewares.Responses.EndTimeBeforeNow)
 				return
 			}
 		}
 	}
 
 	if err := ctx.DB.InsertEvents(&opts); err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed inserting events")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
@@ -83,6 +88,8 @@ func InsertEvents(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http
 }
 
 func GetEvents(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	w.GetRequestLanguage(r)
+
 	validatorOpts := govalidator.Options{
 		Request: r,
 		Rules:   models.GetEventsRules,
@@ -90,7 +97,7 @@ func GetEvents(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Re
 	v := govalidator.New(validatorOpts)
 	errs := v.Validate()
 	if len(errs) > 0 {
-		w.WriteJSON(http.StatusBadRequest, errs, nil, "failed validations")
+		w.Write(http.StatusBadRequest, errs, nil, middlewares.Responses.FailedValidations)
 		return
 	}
 
@@ -100,14 +107,51 @@ func GetEvents(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Re
 
 	events, err := ctx.DB.GetEvents(&opts)
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting events")
-		return
-	}
-
-	if events == nil {
-		w.WriteJSON(http.StatusNotFound, nil, nil, "events not found")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
 	w.WriteJSON(http.StatusOK, events, nil, "")
+}
+
+func GetEvent(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	w.GetRequestLanguage(r)
+
+	vars := mux.Vars(r)
+	eventID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
+		return
+	}
+
+	event, err := ctx.DB.GetEventByID(eventID)
+	if err != nil {
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
+		return
+	}
+
+	if event == nil {
+		w.Write(http.StatusNotFound, nil, nil, middlewares.Responses.EventNotFound)
+		return
+	}
+
+	w.WriteJSON(http.StatusOK, event, nil, "")
+}
+
+func GetEventTypes(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	userInfo := models.InfoUser{}
+	mapstructure.Decode(r.Context().Value("user"), &userInfo)
+
+	if !userInfo.IsAdmin && !userInfo.IsCashier {
+		w.WriteJSON(http.StatusForbidden, nil, nil, "Rol Inválido")
+		return
+	}
+
+	eventTypes, err := ctx.DB.GetEventTypes()
+	if err != nil {
+		w.WriteJSON(http.StatusInternalServerError, nil, err, "Error del servidor")
+		return
+	}
+
+	w.WriteJSON(http.StatusOK, eventTypes, nil, "")
 }

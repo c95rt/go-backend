@@ -29,13 +29,30 @@ func GetRoutes() []*server.Route {
 		{Path: "/user/{id:[0-9]+}", Methods: []string{"PUT", "HEAD"}, Handler: UpdateUser, IsProtected: true},
 		{Path: "/user/{id:[0-9]+}", Methods: []string{"GET", "HEAD"}, Handler: GetUser, IsProtected: true},
 		{Path: "/user", Methods: []string{"GET", "HEAD"}, Handler: GetUsers, IsProtected: true},
+		{Path: "/role", Methods: []string{"GET", "HEAD"}, Handler: GetRoles, IsProtected: true},
 
 		// Event
 		{Path: "/event", Methods: []string{"POST", "HEAD"}, Handler: InsertEvents, IsProtected: true},
 		{Path: "/event", Methods: []string{"GET", "HEAD"}, Handler: GetEvents, IsProtected: false},
+		{Path: "/event/{id:[0-9]+}", Methods: []string{"GET", "HEAD"}, Handler: GetEvent, IsProtected: false},
+		{Path: "/event/type", Methods: []string{"GET", "HEAD"}, Handler: GetEventTypes, IsProtected: true},
 
 		// Order
 		{Path: "/order", Methods: []string{"POST", "HEAD"}, Handler: InsertOrder, IsProtected: true},
-		{Path: "/order", Methods: []string{"GET", "HEAD"}, Handler: InsertOrder, IsProtected: true},
+		{Path: "/order", Methods: []string{"GET", "HEAD"}, Handler: GetOrders, IsProtected: true},
+		{Path: "/order/{id:[0-9]+}/pdf", Methods: []string{"GET", "HEAD"}, Handler: GetOrderPDF, IsProtected: true},
+		{Path: "/order/{id:[0-9]+}", Methods: []string{"PATCH", "HEAD"}, Handler: UseOrder, IsProtected: true},
+		{Path: "/order/{id:[0-9]+}", Methods: []string{"PUT", "HEAD"}, Handler: UpdateOrder, IsProtected: true},
+		{Path: "/sales", Methods: []string{"GET", "HEAD"}, Handler: GetSalesSummary, IsProtected: true},
+		{Path: "/sales/cashier", Methods: []string{"GET", "HEAD"}, Handler: GetCashierSummary, IsProtected: true},
+
+		// Payment
+		{Path: "/payment/{order_id:[0-9]+}/mercadopago", Methods: []string{"POST", "HEAD"}, Handler: InsertPaymentMercadoPago, IsProtected: true},
+		{Path: "/payment/{order_id:[0-9]+}/cashier", Methods: []string{"POST", "HEAD"}, Handler: InsertPaymentCashier, IsProtected: true},
+		{Path: "/payment/mercadopago", Methods: []string{"POST", "HEAD"}, Handler: UpdatePaymentMercadoPago, IsProtected: false},
+
+		// Camping
+		{Path: "/camping", Methods: []string{"POST", "HEAD"}, Handler: InsertCamping, IsProtected: true},
+		{Path: "/camping", Methods: []string{"GET", "HEAD"}, Handler: GetCampings, IsProtected: true},
 	}
 }

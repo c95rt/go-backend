@@ -1,0 +1,17 @@
+name: Build and deploy [develop]
+on: [push]
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: executing remote ssh commands using password
+      uses: appleboy/ssh-action@master
+      with:
+        host: 54.244.140.206
+        username: root
+        password: latadigital
+        script: |
+          whoami
+          /home/ec2-user/parqueoasis-api.sh

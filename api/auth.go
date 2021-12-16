@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"bitbucket.org/parqueoasis/backend/config"
@@ -12,6 +13,8 @@ import (
 )
 
 func Login(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	w.GetRequestLanguage(r)
+
 	var opts models.LoginOpts
 	validatorOpts := govalidator.Options{
 		Request: r,
@@ -27,23 +30,23 @@ func Login(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Reques
 
 	user, err := ctx.DB.GetUserLoginByEmail(opts.Email)
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting user")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
 	if user == nil {
-		w.WriteJSON(http.StatusNotFound, nil, nil, "user not found")
+		w.Write(http.StatusNotFound, nil, nil, middlewares.Responses.UserNotFound)
 		return
 	}
 
 	if !helpers.AuthenticateHashedPassword(user.Password, opts.Password) {
-		w.WriteJSON(http.StatusNotFound, nil, nil, "user not found")
+		w.Write(http.StatusNotFound, nil, nil, middlewares.Responses.UserNotFound)
 		return
 	}
 
 	user.Token, err = helpers.GenerateToken(user, ctx.Config.JWTSecret)
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed generating token")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
@@ -52,6 +55,8 @@ func Login(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Reques
 }
 
 func UpdateUserPassword(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	w.GetRequestLanguage(r)
+
 	var opts models.UpdateUserPasswordOpts
 	validatorOpts := govalidator.Options{
 		Request: r,
@@ -61,24 +66,24 @@ func UpdateUserPassword(ctx *config.AppContext, w *middlewares.ResponseWriter, r
 	v := govalidator.New(validatorOpts)
 	errs := v.ValidateJSON()
 	if len(errs) > 0 {
-		w.WriteJSON(http.StatusBadRequest, errs, nil, "failed validations")
+		w.Write(http.StatusBadRequest, errs, nil, middlewares.Responses.FailedValidations)
 		return
 	}
 
 	user, err := ctx.DB.GetUserByRememberToken(opts.Token)
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting user")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
 	if user == nil {
-		w.WriteJSON(http.StatusBadRequest, nil, nil, "user not found")
+		w.Write(http.StatusBadRequest, nil, nil, middlewares.Responses.UserNotFound)
 		return
 	}
 
 	password, err := helpers.HashPassword(opts.Password)
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed hashing password")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
@@ -86,7 +91,7 @@ func UpdateUserPassword(ctx *config.AppContext, w *middlewares.ResponseWriter, r
 
 	err = ctx.DB.UpdateUserPassword(user)
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed updating user password")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
@@ -94,6 +99,8 @@ func UpdateUserPassword(ctx *config.AppContext, w *middlewares.ResponseWriter, r
 }
 
 func SendRememberToken(ctx *config.AppContext, w *middlewares.ResponseWriter, r *http.Request) {
+	w.GetRequestLanguage(r)
+
 	var opts models.SendRememberTokenOpts
 	validatorOpts := govalidator.Options{
 		Request: r,
@@ -103,33 +110,55 @@ func SendRememberToken(ctx *config.AppContext, w *middlewares.ResponseWriter, r 
 	v := govalidator.New(validatorOpts)
 	errs := v.ValidateJSON()
 	if len(errs) > 0 {
-		w.WriteJSON(http.StatusBadRequest, errs, nil, "failed validations")
+		w.Write(http.StatusBadRequest, errs, nil, middlewares.Responses.FailedValidations)
 		return
 	}
 
 	user, err := ctx.DB.GetUserLoginByEmail(opts.Email)
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed getting user")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
 	if user == nil {
-		w.WriteJSON(http.StatusBadRequest, nil, nil, "user not found")
+		w.Write(http.StatusBadRequest, nil, nil, middlewares.Responses.UserNotFound)
 		return
 	}
 
 	token, err := uuid.NewUUID()
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed generating remember token")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 	err = ctx.DB.UpdateUserRememberToken(user.ID, token.String())
 	if err != nil {
-		w.WriteJSON(http.StatusInternalServerError, nil, err, "failed updating remember token")
+		w.Write(http.StatusInternalServerError, nil, err, middlewares.Responses.InternalServerError)
 		return
 	}
 
-	// SEND EMAIL WITH REMEMBER TOKEN TO REACTIVATE ACCOUNT
+	go func(ctx *config.AppContext, user *models.User, token string) {
+		ed := &helpers.EmailData{
+			EmailTo:      user.Email,
+			NameTo:       user.Firstname,
+			EmailFrom:    ctx.Config.Mail.EmailFrom,
+			NameFrom:     ctx.Config.Mail.NameFrom,
+			Subject:      ctx.Config.Mail.PasswordRecover.Subject,
+			TemplatePath: fmt.Sprintf("%s%s/%s", ctx.Config.Mail.Folder, ctx.Config.Mail.Path, ctx.Config.Mail.PasswordRecover.Template),
+			AwsSMTP:      ctx.AwsSMTP,
+		}
+
+		err = ed.SendEmail(models.PasswordRecoverHTML{
+			Firstname: user.Firstname,
+			Lastname:  user.Lastname,
+			URL:       fmt.Sprintf("%s%s/%s", ctx.Config.BackofficeBaseURL, ctx.Config.BackofficePasswordRecoverPath, token),
+		})
+		if err != nil {
+			w.LogError(err, "failed sending email")
+			return
+		}
+		w.LogInfo(nil, "success sending email")
+	}(ctx, user, token.String())
+
 	w.WriteJSON(http.StatusNoContent, nil, nil, "")
 	return
 }
